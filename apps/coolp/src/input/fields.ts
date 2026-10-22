@@ -1,12 +1,12 @@
+import { isRecord } from '@cool-profile/card-kit/text';
 import { ConfigurationError, parseSchema, validatePatch } from '@cool-profile/card-kit';
 import type { Card } from '@cool-profile/card-kit';
 import * as z from 'zod';
 import { mediaSchema, cardPatchSchema } from '../config/schema.js';
 import type { RequestLayer } from '../config/resolve.js';
 import type { ConfigValues } from '../config/values.js';
-import { decodeWire, schemaAt } from '../config/wire.js';
-import { parseConfigurationText } from '../config/parse.js';
-import { isRecord } from '../config/values.js';
+import { decodeWire, schemaAt } from '@cool-profile/card-kit/wire';
+import { parseConfigurationText } from '@cool-profile/card-kit/text';
 
 export function parseGenerationFields(
   card: Card | undefined,

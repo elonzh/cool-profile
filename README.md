@@ -33,7 +33,8 @@
 使用镜像生成文件：
 
 ```sh
-docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest render snake --source cnb --subject elonzh --output snake.svg
+docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN \
+  docker.cnb.cool/elonzh/cool-profile:latest render snake --source cnb --subject elonzh --output snake.svg
 ```
 
 从源码运行需要 Node.js 24+ 和 pnpm。在仓库目录首次执行：
@@ -43,7 +44,8 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-GitHub 统计与日历使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`。CNB 令牌需要 `account-profile:r`、`account-engage:r`；仓库卡还需要 `repo-basic-info:r`。
+GitHub 统计与日历使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`。
+CNB 令牌需要 `account-profile:r`、`account-engage:r`；仓库卡还需要 `repo-basic-info:r`。
 
 ```sh
 pnpm coolp render snake --source cnb --subject elonzh --output snake.svg
@@ -101,9 +103,13 @@ steps:
 ## 图片服务
 
 ```sh
-docker run --rm -p 3000:3000 -e GITHUB_TOKEN -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest serve --host 0.0.0.0
+docker run --rm -p 3000:3000 -e GITHUB_TOKEN -e CNB_TOKEN \
+  docker.cnb.cool/elonzh/cool-profile:latest serve --host 0.0.0.0
 ```
 
-访问 `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh` 即可获取图片。添加 `theme=dark`、`locale=en` 切换主题和语言，路径后缀可改为 `.png`。
+打开 `http://localhost:3000/`，可以查看效果、调整参数、生成图片，并复制命令、URL 或配置。
+
+访问 `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh` 可直接获取图片。
+添加 `theme=dark`、`locale=en` 切换主题和语言，路径后缀可改为 `.png`。
 
 [GitHub](https://github.com/elonzh/cool-profile) · [CNB](https://cnb.cool/elonzh/cool-profile)

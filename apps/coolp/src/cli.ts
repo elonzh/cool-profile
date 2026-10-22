@@ -17,7 +17,7 @@ import {
   runtimeSchema,
 } from './config/index.js';
 import type { RuntimePatch } from './config/index.js';
-import { decodeWire, schemaAt } from './config/wire.js';
+import { decodeWire, schemaAt } from '@cool-profile/card-kit/wire';
 import { parseOptions, stringFields } from './input/options.js';
 import { parseGenerationFields } from './input/fields.js';
 import { readPluginSettings, pluginEnvironment } from './input/plugin.js';

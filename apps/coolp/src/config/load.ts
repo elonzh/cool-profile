@@ -6,7 +6,7 @@ import { runtimeDefaults, runtimeSchema } from './schema.js';
 import type { Runtime, RuntimePatch } from './schema.js';
 import { environmentLayers, validateLayer } from './layers.js';
 import type { ConfigLayer } from './layers.js';
-import { parseConfigurationText } from './parse.js';
+import { parseConfigurationText } from '@cool-profile/card-kit/text';
 import { freezeJson, mergeValues, parseResolved } from './values.js';
 import type { ConfigValues, Origins } from './values.js';
 

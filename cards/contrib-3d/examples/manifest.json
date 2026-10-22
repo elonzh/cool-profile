@@ -1,0 +1,9 @@
+{
+  "contrib-3d": {
+    "name": { "zh-CN": "3D 活跃日历", "en": "3D activity calendar" },
+    "cases": [
+      { "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } },
+      { "pattern": "github-*", "params": { "source": "github", "subject": "elonzh" } }
+    ]
+  }
+}

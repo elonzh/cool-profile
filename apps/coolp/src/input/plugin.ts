@@ -1,7 +1,7 @@
 import { ConfigurationError, parseSchema } from '@cool-profile/card-kit';
 import * as z from 'zod';
 import type { ProviderOptions } from '@cool-profile/data';
-import { parseConfigurationText } from '../config/parse.js';
+import { parseConfigurationText } from '@cool-profile/card-kit/text';
 import type { Card } from '@cool-profile/card-kit';
 import { runtimePatchSchema } from '../config/schema.js';
 import type { RuntimePatch } from '../config/schema.js';

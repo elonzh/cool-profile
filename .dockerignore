@@ -6,6 +6,6 @@ coverage
 .cache
 .env
 .env.*
-**/examples
 docs
 README*
+apps/coolp/assets/gallery

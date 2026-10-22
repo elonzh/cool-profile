@@ -1,0 +1,17 @@
+:root {
+  color-scheme: light;
+  --page: #f8fafb;
+  --surface: #fff;
+  --canvas: #edf1f3;
+  --ink: #18272e;
+  --muted: #53656e;
+  --line: #d5dfe3;
+  --scroll: #9baeb7;
+  --green: #087e58;
+  --green-hover: #076346;
+  --green-tint: #eaf5ef;
+  --selection: #b8e8d4;
+  --error: #a62a32;
+  --code: #244b43;
+  --mono: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+}

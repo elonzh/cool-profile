@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import type { Server } from 'node:http';
 import { once } from 'node:events';
-import { mkdtemp, writeFile, readFile, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, symlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
@@ -91,6 +91,44 @@ it('delivers the same outlined Chinese SVG as file generation with HEAD and cond
   expect(Buffer.from(await png.arrayBuffer()).subarray(0, 8)).toEqual(
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
   );
+});
+
+it('serves the gallery and Unicode asset names with conditional caching and rejects traversal', async () => {
+  const root = await folder();
+  await mkdir(resolve(root, 'assets'));
+  await writeFile(resolve(root, 'index.html'), '<!doctype html><title>Cool Profile</title>');
+  await writeFile(resolve(root, 'assets/预览-HASH.js'), 'export const preview = true;');
+  const configuration = await loadConfiguration(registry, { cwd: root, environment: {} });
+  const renderer = await createRenderer({ registry, configuration, environment: {} });
+  const port = await listen(
+    createImageServer({ registry, configuration, renderer, galleryRoot: root }),
+  );
+  const base = 'http://127.0.0.1:' + port;
+  const index = await fetch(base + '/');
+  expect(index.status).toBe(200);
+  expect(index.headers.get('content-type')).toContain('text/html');
+  expect(index.headers.get('cache-control')).toBe('no-cache');
+  expect(await index.text()).toContain('Cool Profile');
+  const assetUrl = base + '/assets/' + encodeURIComponent('预览-HASH.js');
+  const asset = await fetch(assetUrl);
+  expect(asset.status).toBe(200);
+  expect(asset.headers.get('content-type')).toContain('text/javascript');
+  expect(asset.headers.get('cache-control')).toContain('immutable');
+  expect((await fetch(assetUrl, { method: 'HEAD' })).headers.get('content-length')).toBe('28');
+  expect(
+    (await fetch(assetUrl, { headers: { 'If-None-Match': asset.headers.get('etag')! } })).status,
+  ).toBe(304);
+  for (const path of [
+    '/assets/%2e%2e%2findex.html',
+    '/assets/%5cindex.html',
+    '/assets/%00.js',
+    '/assets/%ZZ.js',
+    '/assets/missing.js',
+  ]) {
+    const response = await fetch(base + path);
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toContain(root);
+  }
 });
 
 it('changes the ETag when live data changes and reports upstream failures as JSON', async () => {

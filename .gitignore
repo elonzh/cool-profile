@@ -9,3 +9,5 @@ generated/
 *.log
 *.tsbuildinfo
 .DS_Store
+apps/coolp/assets/gallery/
+.impeccable/

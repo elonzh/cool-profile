@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="将动态信息变成个人主页图片与动画。" />
+    <title>Cool Profile</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Cool Profile<span class="brand-dot" aria-hidden="true"></span></h1>
+      <nav aria-label="项目">
+        <a href="https://github.com/elonzh/cool-profile">GitHub</a>
+        <a href="https://cnb.cool/elonzh/cool-profile">CNB</a>
+        <a
+          href="https://cnb.cool/elonzh/cool-profile/-/blob/main/docs/architecture.md"
+          data-copy="docs"
+          >文档</a
+        >
+        <button type="button" id="ui-language">English</button>
+      </nav>
+    </header>
+    <main class="workbench">
+      <section class="showcase" aria-labelledby="card-title">
+        <div class="preview-heading">
+          <h2 id="card-title"></h2>
+          <div class="preview-state">
+            <span id="preview-badge"></span>
+            <button type="button" id="play" hidden></button>
+          </div>
+        </div>
+        <div class="preview-canvas" id="canvas">
+          <img id="preview" alt="" />
+          <p id="empty-preview" hidden></p>
+        </div>
+        <div class="preview-actions">
+          <label class="sample-picker"
+            ><span data-copy="sampleAccount">样张账号</span
+            ><select id="example"></select
+          ></label>
+          <a id="download" download></a>
+        </div>
+        <nav class="card-strip" id="cards" aria-label="卡片效果"></nav>
+      </section>
+      <aside class="controls">
+        <h2 data-copy="customize">自定义</h2>
+        <form id="settings">
+          <div id="primary-fields" class="field-stack"></div>
+          <div class="media-fields">
+            <label
+              ><span data-copy="format">格式</span
+              ><select id="format"></select
+            ></label>
+            <label
+              ><span data-copy="theme">主题</span
+              ><select id="theme"></select
+            ></label>
+            <label class="locale-field"
+              ><span data-copy="mediaLanguage">媒体语言</span
+              ><select id="locale"></select
+            ></label>
+          </div>
+          <details id="advanced">
+            <summary data-copy="more">更多参数</summary>
+            <div id="advanced-fields" class="field-stack"></div>
+            <label
+              ><span data-copy="seed">随机种子</span
+              ><input id="seed" type="number" min="0" max="4294967295" step="1" value="0"
+            /></label>
+          </details>
+          <button class="generate" id="generate" type="submit" data-copy="generate">
+            生成图片
+          </button>
+          <p id="request-status" role="status" aria-live="polite" hidden></p>
+        </form>
+      </aside>
+      <section class="outputs" aria-label="使用方式">
+        <div class="output-toolbar">
+          <div role="tablist" aria-label="使用方式" id="tabs">
+            <button
+              type="button"
+              role="tab"
+              id="tab-cli"
+              aria-controls="output-panel"
+              aria-selected="true"
+              tabindex="0"
+              data-output="cli"
+              data-copy="cli"
+            >
+              命令行
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-url"
+              aria-controls="output-panel"
+              aria-selected="false"
+              tabindex="-1"
+              data-output="url"
+            >
+              URL
+            </button>
+            <button
+              type="button"
+              role="tab"
+              id="tab-config"
+              aria-controls="output-panel"
+              aria-selected="false"
+              tabindex="-1"
+              data-output="config"
+            >
+              coolp.json
+            </button>
+          </div>
+          <button type="button" id="copy" data-copy="copy">复制</button>
+        </div>
+        <pre
+          id="output-panel"
+          role="tabpanel"
+          aria-labelledby="tab-cli"
+          tabindex="0"
+        ><code id="output"></code></pre>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

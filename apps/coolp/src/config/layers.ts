@@ -1,10 +1,11 @@
+import { cloneJson, isRecord } from '@cool-profile/card-kit/text';
 import * as z from 'zod';
 import { ConfigurationError, parseSchema, validatePatch } from '@cool-profile/card-kit';
 import type { Card } from '@cool-profile/card-kit';
 import type { ConfigDocument, CardPatch, MediaPatch } from './schema.js';
 import { documentSchema, runtimeSchema, mediaSchema } from './schema.js';
-import { originLabel, isRecord, cloneJson } from './values.js';
-import { decodeWire, schemaAt } from './wire.js';
+import { originLabel } from './values.js';
+import { decodeWire, schemaAt } from '@cool-profile/card-kit/wire';
 
 export interface ConfigLayer {
   source: string;

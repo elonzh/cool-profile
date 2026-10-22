@@ -11,7 +11,7 @@ import {
   resolveOutput,
 } from '../apps/coolp/src/config/index.js';
 import { parseGenerationFields } from '../apps/coolp/src/input/fields.js';
-import { parseConfigurationText } from '../apps/coolp/src/config/parse.js';
+import { parseConfigurationText } from '../packages/card-kit/src/text.js';
 
 const registry = createCardRegistry([configCard]);
 const folders: string[] = [];

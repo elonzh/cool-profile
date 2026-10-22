@@ -8,14 +8,15 @@
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && pnpm --filter @cool-profile/gallery typecheck",
     "test": "vitest run",
     "cards:discover": "tsx scripts/discover-cards.ts",
-    "build": "pnpm cards:discover && tsdown",
+    "build": "pnpm cards:discover && pnpm --filter @cool-profile/gallery build && tsdown",
     "coolp": "tsx apps/coolp/src/cli.ts",
     "check": "pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "hooks:install": "prek install",
-    "sync:remotes": "git push origin main && git push github main"
+    "sync:remotes": "git push origin main && git push github main",
+    "gallery:dev": "pnpm cards:discover && pnpm --filter @cool-profile/gallery dev"
   },
   "devDependencies": {
     "@types/node": "catalog:",

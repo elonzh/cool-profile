@@ -1,0 +1,17 @@
+{
+  "name": "@cool-profile/gallery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@cool-profile/card-kit": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "catalog:"
+  }
+}

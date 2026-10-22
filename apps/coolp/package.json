@@ -17,7 +17,6 @@
     "@cool-profile/graphics": "workspace:*",
     "@resvg/resvg-js": "catalog:",
     "sharp": "catalog:",
-    "yaml": "catalog:",
     "zod": "catalog:"
   }
 }

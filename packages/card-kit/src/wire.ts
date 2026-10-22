@@ -1,9 +1,8 @@
 import type * as z from 'zod';
-import { ConfigurationError } from '@cool-profile/card-kit';
-import { parseConfigurationText } from './parse.js';
-import { isRecord } from './values.js';
+import { ConfigurationError } from './schema.js';
+import { parseConfigurationText, isRecord } from './text.js';
 
-type JsonSchema = z.core.JSONSchema.JSONSchema;
+export type JsonSchema = z.core.JSONSchema.JSONSchema;
 
 export function schemaAt(root: JsonSchema, path: readonly string[]): JsonSchema {
   let schema = root;

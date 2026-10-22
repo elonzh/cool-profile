@@ -4,11 +4,15 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./text": "./src/text.ts",
+    "./wire": "./src/wire.ts",
+    "./media": "./src/media.ts"
   },
   "dependencies": {
     "@cool-profile/data": "workspace:*",
     "@cool-profile/graphics": "workspace:*",
+    "yaml": "catalog:",
     "zod": "catalog:"
   }
 }

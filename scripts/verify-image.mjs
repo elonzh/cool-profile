@@ -110,6 +110,15 @@ async function verifyRuntime(fixture) {
     assert.ok(response, 'Server did not start: ' + logs);
     assert.equal(response.status, 200);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), expected);
+    const gallery = await fetch('http://127.0.0.1:33000/');
+    assert.equal(gallery.status, 200);
+    const html = await gallery.text();
+    assert.match(html, /Cool Profile/);
+    const script = html.match(/<script[^>]+src="([^"]+)"/);
+    assert.ok(script, 'Gallery module is missing');
+    const module = await fetch(new URL(script[1], gallery.url));
+    assert.equal(module.status, 200);
+    assert.match(module.headers.get('content-type'), /javascript/);
     assert.equal(
       (await fetch(url, { headers: { 'If-None-Match': response.headers.get('etag') } })).status,
       304,
@@ -132,7 +141,7 @@ async function verifyRuntime(fixture) {
       assert.equal(metadata.pages, 2);
     }
     console.log(
-      'Image verified: CLI / plugin / Action / HTTP PNG parity, ETag, fonts, GIF and WebP',
+      'Image verified: CLI / plugin / Action / HTTP PNG parity, gallery, ETag, fonts, GIF and WebP',
     );
   } finally {
     if (server && server.exitCode === null) {

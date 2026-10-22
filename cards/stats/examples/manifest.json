@@ -1,0 +1,23 @@
+{
+  "stats": {
+    "name": { "zh-CN": "个人统计", "en": "Profile stats" },
+    "cases": [
+      { "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } },
+      { "pattern": "github-*", "params": { "source": "github", "subject": "elonzh" } }
+    ]
+  },
+  "languages": {
+    "name": { "zh-CN": "语言分布", "en": "Languages" },
+    "cases": [
+      { "pattern": "languages-cnb-*", "params": { "source": "cnb", "subject": "elonzh" } },
+      { "pattern": "languages-github-*", "params": { "source": "github", "subject": "elonzh" } }
+    ]
+  },
+  "repo": {
+    "name": { "zh-CN": "仓库卡片", "en": "Repository" },
+    "cases": [
+      { "pattern": "repo-cnb-*", "params": { "source": "cnb", "subject": "elonzh/hermes-npc" } },
+      { "pattern": "repo-github-*", "params": { "source": "github", "subject": "Platane/snk" } }
+    ]
+  }
+}

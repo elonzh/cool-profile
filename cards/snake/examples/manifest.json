@@ -1,0 +1,9 @@
+{
+  "snake": {
+    "name": { "zh-CN": "贪吃蛇", "en": "Snake" },
+    "cases": [
+      { "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } },
+      { "pattern": "github-*", "params": { "source": "github", "subject": "elonzh" } }
+    ]
+  }
+}

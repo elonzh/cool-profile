@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats、languages、repo 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats、languages、repo 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊提供六种效果的真实样张、参数编辑和实时生成。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -420,9 +420,59 @@ CNB 插件使用镜像默认 ENTRYPOINT coolp，args 追加子命令 render 或 
 
 双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 通过同步的 cnb:apply 任务并行调用 amd64、arm64 原生节点，分别构建、验证和推送架构标签；全部成功后合并为提交 SHA 的 manifest，再发布为 latest。父流水线串行执行，避免旧构建覆盖新镜像。最后通过真实 CNB 插件任务读取当前仓库，生成 PNG。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。
 
+## 画廊
+
+apps/gallery 是 Vite + TypeScript 应用，从构建时生成的卡片目录读取参数 schema、格式、主题、语言和样张。浏览器不加载绘图模块、原生编码器、数据适配器或令牌。CLI、URL 和画廊复用 card-kit 的 JSON/YAML、参数线格式及媒体校验；运行配置的覆盖与状态仍由 coolp 管理。
+
+卡片包可在 examples/manifest.json 描述展示名称和样张请求，不需要修改中心列表：
+
+```json
+{
+  "snake": {
+    "name": { "zh-CN": "贪吃蛇", "en": "Snake" },
+    "cases": [{ "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } }]
+  }
+}
+```
+
+pattern 匹配 examples 下的媒体文件，文件名以 `-<theme>.<locale>.<format>` 结束。构建校验卡片归属、请求参数和媒体组合，并生成静态首帧预览；没有 manifest 的卡片仍按 ID 和 schema 展示。样张与请求元信息随包维护，新增包会自动进入画廊。
+
+画廊产物写入 apps/coolp/assets/gallery，随应用镜像分发，由 server 根路径交付。用户选择样张、编辑参数、切换主题和媒体语言后，可生成图片、下载或复制等义的 CLI、URL、coolp.json。空参数交由服务配置和卡片默认值补齐。界面语言独立于媒体语言，默认均为中文。
+
+### Direction contract
+
+- THESIS：先看到真实卡片，再将自己的数据带入；样张和实时结果有明确状态。
+- OWN-WORLD：沿用现有卡片的明暗效果，以冷白工作界面、深灰正文和绿色操作色承载。使用者在桌面上编辑主页，浅色表单便于读取代码，暗色属于可选择的媒体主题。
+- STORY：选择效果与样张账号，调整参数，生成图片或复制使用方式；所有入口围绕这条路径。
+- FIRST VIEWPORT：桌面左侧为完整效果预览及实际样张选择，右侧为参数与生成操作，下方展示 CLI、URL 和配置。手机按预览、参数、使用方式排列，保留完整图幅。
+- FORM：基于现有卡片视觉直接实现作品预览与参数编辑；不增加独立品牌插图。效果自身承担动画，减少动态偏好下以静态首帧展示。
+- FINISH：以桌面、手机实际操作验收、独立评审和本文件中的界面约定作为交付条件；正式说明只维护本文件。
+
+### 界面约定
+
+颜色由 apps/gallery/src/tokens.css 维护，组件与响应式布局由 apps/gallery/src/style.css 维护。画廊使用浅色工作界面；深色主题作用于媒体和预览画布。
+
+| 用途                     | 当前值                                                                |
+| ------------------------ | --------------------------------------------------------------------- |
+| 页面、表面、画布         | `--page: #f8fafb`、`--surface: #fff`、`--canvas: #edf1f3`             |
+| 正文、辅助文字、代码     | `--ink: #18272e`、`--muted: #53656e`、`--code: #244b43`               |
+| 边线、滚动条             | `--line: #d5dfe3`、`--scroll: #9baeb7`                                |
+| 操作、悬停、选中底色     | `--green: #087e58`、`--green-hover: #076346`、`--green-tint: #eaf5ef` |
+| 文本选区、错误           | `--selection: #b8e8d4`、`--error: #a62a32`                            |
+| 深色媒体画布、空状态文字 | `#182126`、`#c4d0d7`                                                  |
+
+正文使用系统无衬线字体栈，字号 14px、行高 1.55；品牌标题 25px/700，效果标题 21px/600，自定义标题 18px。表单标签与主要操作辅助文字为 12px，代码使用系统等宽字体栈、12px 和 1.9 行高。界面以色面和 1px 边线分区，不使用投影；画布圆角 16px、效果选项 12px、表单 7px、生成按钮 8px。字段间距 16px，区段间距主要为 22–24px。
+
+内容最大宽度 1440px，桌面左右内边距 48px；预览与输出占左列，320px 参数列靠右并在距顶部 24px 处吸附，两列间距 40px。宽度不超过 1050px 时内边距减为 28px、参数列 280px、列间距 28px。宽度不超过 760px 时改为预览、参数、使用方式的单列顺序，左右内边距 20px，参数区域取消吸附；主参数分两列，格式、主题、语言分三列，输入字号提高到 16px。预览始终等比完整显示；手机画布高 220px，效果列表横向滚动。
+
+- 选择效果或样张会填入对应请求参数；表单从 schema 生成，其余参数收纳在“更多参数”。参数或媒体设置变化时，立即更新 CLI、URL 和 coolp.json，取消待处理请求并返回样张预览。空值不写入请求。
+- 样张按主题、媒体语言匹配，优先使用所选格式，否则显示该组合已有格式；状态标明样张账号及实际格式。仅点击“生成图片”才请求实时结果，生成期间按钮禁用且表单标记忙碌；成功后显示“生成结果”并提供下载，失败在表单内报告。无匹配样张时显示空状态。
+- 效果选项用绿色边线及浅绿底标识选中，使用方式页签用绿色下划线标识当前项。所有可聚焦控件的键盘焦点为绿色 3px 外框、偏移 3px；页签支持方向键及 Home/End。复制成功原位反馈，失败提示可选中文本复制；参数无效时禁用复制，状态消息通过 polite live region 报告。
+- 界面语言由 `ui=zh-CN|en` 选择，与媒体语言独立。动画有播放/停止操作；遵循减少动态偏好时，样张显示静态首帧，实时动画等待用户主动播放，同时关闭界面动画、过渡和滚动动效。
+
 ## 工程与实施
 
-Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数使用 Zod 4，tsx 执行发现脚本，Vitest 验证行为，tsdown 打包 ESM 可执行文件。画廊拟用 Vite 与 TypeScript。esbuild 的依赖安装脚本仅在项目 allowBuilds 中启用，用于 tsx 执行 TypeScript，不安装全局工具。
+Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数使用 Zod 4，tsx 执行发现脚本，Vitest 验证行为，tsdown 打包 ESM 可执行文件。画廊使用 Vite 与 TypeScript。esbuild 的依赖安装脚本仅在项目 allowBuilds 中启用，用于 tsx 执行 TypeScript，不安装全局工具。
 
 ```sh
 pnpm install --frozen-lockfile
@@ -436,11 +486,9 @@ pnpm sync:remotes
 
 格式及风格检查交给提交钩子，修复后检查差异、重新暂存再提交。功能验证覆盖注册发现、配置覆盖与类型转换、CLI/URL 请求一致性、数据语义、确定性模拟、文字与图形边界及媒体交付。测试针对行为风险，不为简单配置堆叠实现镜像式断言。
 
-pnpm cards:discover 校验 cards/* 的实际导出并生成 generated/cards.ts，应用构建导入这份注册表。generated/ 不提交到 Git，CI 检查会重新生成。
+pnpm cards:discover 校验 cards/* 的实际导出并生成应用注册表 generated/cards.ts、画廊目录 generated/card-catalog.ts 和样张首帧。generated/ 不提交到 Git，CI 检查会重新生成。
 
-pnpm build 先发现卡片，再生成 apps/coolp/dist/coolp.mjs；该文件可直接通过 Node 或其 shebang 运行。开发时 pnpm coolp 使用相同入口。完整检查在测试前构建，CLI 集成测试执行真实 bundle，HTTP 测试使用本地 API 服务，不依赖外部令牌；真实样张保存在各卡片包的 examples/。
-
-实施顺序为协议及发现、配置与数据/图形基础、首张卡片的 CLI 和 server、四类效果及多语言样张，随后完成统一镜像、CI 入口、画廊和插件市场。
+pnpm build 依次执行卡片发现、画廊构建和 CLI bundle，画廊写入 apps/coolp/assets/gallery，CLI 写入 apps/coolp/dist/coolp.mjs；该文件可直接通过 Node 或其 shebang 运行。开发时 pnpm coolp 执行 CLI TypeScript 入口，pnpm gallery:dev 启动画廊并将 /v1 请求代理到本地 coolp server。完整检查在测试前构建，CLI 集成测试执行真实 bundle，HTTP 测试使用本地 API 服务，不依赖外部令牌；真实样张保存在各卡片包的 examples/。
 
 origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](https://github.com/elonzh/cool-profile)。两个远程共用 main、提交历史和版本号；pnpm sync:remotes 顺序推送，完成后核对两个远程 SHA。提交使用中文 Conventional Commit 标题，正文说明实现与验证。
 

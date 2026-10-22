@@ -21,3 +21,4 @@ catalog:
   fontkit: 2.0.4
   '@types/fontkit': 2.0.9
   sharp: 0.35.5
+  vite: 8.3.5

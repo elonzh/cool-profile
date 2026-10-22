@@ -1,3 +1,4 @@
+import { cloneJson, isRecord } from '@cool-profile/card-kit/text';
 import { ConfigurationError } from '@cool-profile/card-kit';
 import type * as z from 'zod';
 
@@ -10,31 +11,6 @@ export type Origins = Map<string, Origin>;
 
 export function pointer(path: readonly (string | number)[]): string {
   return path.map((key) => '/' + String(key).replaceAll('~', '~0').replaceAll('/', '~1')).join('');
-}
-
-export function isRecord(value: unknown): value is ConfigValues {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
-  const prototype: unknown = Object.getPrototypeOf(value);
-  return prototype === null || prototype === Object.prototype;
-}
-
-export function cloneJson(value: unknown, active = new WeakSet<object>()): unknown {
-  if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (value === undefined) return undefined;
-  if (typeof value !== 'object' || active.has(value)) {
-    throw new ConfigurationError('Configuration must contain finite JSON values without cycles');
-  }
-  active.add(value);
-  let result: unknown;
-  if (Array.isArray(value)) result = value.map((entry) => cloneJson(entry, active));
-  else if (isRecord(value)) {
-    result = Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, cloneJson(entry, active)]),
-    );
-  } else throw new ConfigurationError('Configuration must contain plain JSON objects');
-  active.delete(value);
-  return result;
 }
 
 export function mergeValues(
