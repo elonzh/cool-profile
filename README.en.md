@@ -10,7 +10,7 @@ Media output will support multiple languages, with Chinese as the default, and a
 
 ## Usage
 
-A CLI will generate files in batches. A CNB plugin and a GitHub Action will support automated updates. A future server mode will return images directly from URLs.
+The planned `coolp` command will support file generation with `coolp render`, batch generation with `coolp batch`, and an image server with `coolp serve`. The CNB plugin and GitHub Action will run the same command using the same image.
 
 The project is being initialized; the generator has not been released yet. See the [architecture proposal](docs/architecture.md).
 

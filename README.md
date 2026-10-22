@@ -10,7 +10,7 @@
 
 ## 使用方式
 
-计划提供 CLI 批量生成文件，也可通过 CNB 插件和 GitHub Action 自动更新。后续增加 server 模式，通过 URL 直接获取图片。
+计划通过统一的 `coolp` 命令使用：`coolp render` 生成文件，`coolp batch` 批量生成，`coolp serve` 启动图片服务。CNB 插件和 GitHub Action 调用同一个命令，使用同一个镜像。
 
 项目处于初始化阶段，生成器尚未发布。[查看架构草案](docs/architecture.md)。
 
