@@ -22,6 +22,22 @@
       name: verify-image
       script: node scripts/verify-image.mjs cool-profile:verify
 
+.native-image: &native-image
+  docker:
+    image: node:latest
+  services:
+    - docker
+  stages:
+    - name: build-native-image
+      script: >-
+        docker build --platform linux/${BUILD_ARCH}
+        --label org.opencontainers.image.revision=${CNB_COMMIT}
+        -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-${BUILD_ARCH} .
+    - name: verify-native-image
+      script: node scripts/verify-image.mjs ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-${BUILD_ARCH} linux/${BUILD_ARCH}
+    - name: push-native-image
+      script: docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-${BUILD_ARCH}
+
 main:
   push:
     - <<: *check
@@ -33,24 +49,22 @@ main:
         - *install-pnpm
         - *install-dependencies
         - *check-workspace
-        - name: prepare-multi-platform-builder
-          script: |
-            docker run --privileged --rm tonistiigi/binfmt:latest --install arm64
-            docker buildx create --name cool-profile --driver docker-container --driver-opt image=moby/buildkit:latest --use
-        - name: build-release-images
-          script: >-
-            docker buildx build --platform linux/amd64,linux/arm64
-            --label org.opencontainers.image.revision=${CNB_COMMIT}
-            -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} --push .
-        - name: verify-amd64-image
-          script: node scripts/verify-image.mjs ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} linux/amd64
-        - name: verify-arm64-image
-          script: node scripts/verify-image.mjs ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} linux/arm64
+        - name: build-native-images
+          jobs:
+            amd64:
+              type: cnb:apply
+              options:
+                event: api_trigger_image_amd64
+                sync: true
+            arm64:
+              type: cnb:apply
+              options:
+                event: api_trigger_image_arm64
+                sync: true
         - name: publish-latest
-          script: >-
-            docker buildx imagetools create
-            -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
-            ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+          script: |
+            docker buildx imagetools create -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-amd64 ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-arm64
+            docker buildx imagetools create -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
         - name: generate-with-published-plugin
           image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
           args: [render]
@@ -61,5 +75,19 @@ main:
             output: .cache/plugin-smoke.png
 
 $:
+  api_trigger_image_amd64:
+    - <<: *native-image
+      name: build-amd64
+      runner:
+        tags: cnb:arch:amd64
+      env:
+        BUILD_ARCH: amd64
+  api_trigger_image_arm64:
+    - <<: *native-image
+      name: build-arm64
+      runner:
+        tags: cnb:arch:arm64:v8
+      env:
+        BUILD_ARCH: arm64
   pull_request:
     - *check
