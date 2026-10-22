@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 const image = process.argv[2];
-if (!image) throw new Error('Usage: node scripts/verify-image.mjs <image>');
+const platform = process.argv[3];
+if (!image) throw new Error('Usage: node scripts/verify-image.mjs <image> [platform]');
 const repository = JSON.parse(
   readFileSync(new URL('../test/fixtures/repositories.json', import.meta.url), 'utf8'),
 ).github;
@@ -147,7 +148,16 @@ async function verifyRuntime(fixture) {
 
 execFileSync(
   'docker',
-  ['run', '--rm', '--interactive', '--entrypoint', 'node', image, '--input-type=module'],
+  [
+    'run',
+    '--rm',
+    '--interactive',
+    ...(platform ? ['--platform', platform] : []),
+    '--entrypoint',
+    'node',
+    image,
+    '--input-type=module',
+  ],
   {
     input: '(' + verifyRuntime.toString() + ')(' + JSON.stringify(repository) + ');',
     stdio: ['pipe', 'inherit', 'inherit'],

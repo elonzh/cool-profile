@@ -418,7 +418,7 @@ root action.yml 引用同一镜像，entrypoint 指向随应用打包的 action.
 
 CNB 插件使用镜像默认 ENTRYPOINT coolp，args 追加子命令 render 或 batch；server 通过 serve 启动。根 plugin-meta.json、README.md、README.en.md 组成插件市场贡献材料。CI 生成工作区文件，Git 提交、制品上传和部署由后续流水线步骤负责。
 
-双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 通过后发布提交 SHA 标签和 latest；发布流水线串行执行，避免旧构建覆盖新镜像。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。
+双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 使用 Buildx 构建 linux/amd64、linux/arm64，先推送提交 SHA 标签并分别运行验证，两种架构都通过后再将同一 manifest 发布为 latest；发布流水线串行执行，避免旧构建覆盖新镜像。最后通过真实 CNB 插件任务读取当前仓库，生成 PNG。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。
 
 ## 工程与实施
 

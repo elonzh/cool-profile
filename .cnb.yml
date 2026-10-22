@@ -33,14 +33,32 @@ main:
         - *install-pnpm
         - *install-dependencies
         - *check-workspace
-        - *build-image
-        - *verify-image
-        - name: publish-image
+        - name: prepare-multi-platform-builder
           script: |
-            docker tag cool-profile:verify ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
-            docker tag cool-profile:verify ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
-            docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
-            docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+            docker run --privileged --rm tonistiigi/binfmt:latest --install arm64
+            docker buildx create --name cool-profile --driver docker-container --driver-opt image=moby/buildkit:latest --use
+        - name: build-release-images
+          script: >-
+            docker buildx build --platform linux/amd64,linux/arm64
+            --label org.opencontainers.image.revision=${CNB_COMMIT}
+            -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} --push .
+        - name: verify-amd64-image
+          script: node scripts/verify-image.mjs ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} linux/amd64
+        - name: verify-arm64-image
+          script: node scripts/verify-image.mjs ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} linux/arm64
+        - name: publish-latest
+          script: >-
+            docker buildx imagetools create
+            -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+            ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+        - name: generate-with-published-plugin
+          image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+          args: [render]
+          settings:
+            card: repo
+            params: { source: cnb, subject: $CNB_REPO_SLUG }
+            format: png
+            output: .cache/plugin-smoke.png
 
 $:
   pull_request:
