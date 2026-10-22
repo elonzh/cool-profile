@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已具备工程检查、类型化卡片协议、数据能力与 SVG 产物契约、参数定义校验、部分配置校验和构建时发现。配置覆盖、数据适配器、CLI/server 和实际效果正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本，两份 README 介绍项目、展示效果和指导使用。
+当前已具备工程检查、类型化卡片协议、数据能力与 SVG 产物契约、构建时发现、分层配置、来源诊断，以及 CLI/URL/插件的共用参数解析模块。可执行 CLI、HTTP server、数据适配器和实际效果正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本，两份 README 介绍项目、展示效果和指导使用。
 
 ## 职责与依赖
 
@@ -93,7 +93,7 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 ```
 
 - formats 第一项为默认格式；themes 包含 default，locales 包含 zh-CN，首期卡片同时提供 en。
-- params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed 及 CLI 控制选项是保留名，不能重复声明。
+- params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params 及 CLI 控制选项是保留名，不能重复声明。
 - defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
 - validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。
 - LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置，字体与图形工具由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
@@ -192,11 +192,13 @@ GET /v1/cards/bilibili/card-id.png?uid=123
 | 输出文件 | --output / -o               | CLI 交付设置，不进入图片 URL       |
 | 运行配置 | --config、--host、--port 等 | 本地配置与环境变量，不进入图片 URL |
 
-公共渲染默认值为 locale=zh-CN、theme=default、seed=0；格式采用当前卡片的默认值。source、subject、year、fps、strategy 等都是卡片声明的参数。单来源日历卡可声明 source 与 subject，融合卡可声明多个账号或其他输入。浏览器、终端和服务器地区设置不改变媒体语言。
+公共渲染默认值为 locale=zh-CN、theme=default、seed=0，seed 范围为 0..4294967295；格式采用当前卡片的默认值。source、subject、year、fps、strategy 等都是卡片声明的参数。单来源日历卡可声明 source 与 subject，融合卡可声明多个账号或其他输入。浏览器、终端和服务器地区设置不改变媒体语言。
 
 CLI 省略 format、URL 省略扩展名时采用同一默认格式。URL 在最后一段识别格式，前面的斜杠完整保留在 ID 中；仅对各段解码一次，不把百分号编码的斜杠转换成 ID 分隔符。URL 不再提供 format 查询参数。文件扩展名不参与选格式，冲突时报参数错误。CLI 默认输出 `<完整 card-id>.<format>`，保留子目录；`--output -` 将媒体写入 stdout，日志写入 stderr。
 
-卡片参数按 schema 解析：字符串保留字符串含义，数值使用明确的十进制表示，布尔只接受 true/false；数组与对象在 CLI/URL 中使用 JSON，URL 按查询参数编码。重复查询键、未知选项和不支持的组合报错。
+卡片参数按 schema 解析：字符串保留字符串含义，数值使用不含指数的十进制表示，布尔只接受 true/false；数组、对象和包含多种 JSON 类型的联合类型在 CLI/URL 中使用 JSON，URL 按查询参数编码。重复查询键、未知选项和不支持的组合报错。
+
+新增卡片的参数也可整体放进 `--params '<JSON 对象>'`，URL 使用同名 params 查询参数。对象内容对应配置中的 params 区域；与单独字段重复提供同一个参数时报错。CI 元数据可通过这一个输入传递新卡片参数，无需为每张卡扩展固定 inputs。
 
 ### 首期效果
 
@@ -272,7 +274,7 @@ jobs:
     output: github-stats.svg
 ```
 
-配置文件选择顺序为 `--config`、`COOLP_CONFIG`、当前目录的 coolp.yaml / coolp.yml / coolp.json。自动发现只检查当前目录；存在多个候选文件时报错。render 与 serve 没有文件时使用内置默认值及环境变量，batch 需要有 jobs 的配置。显式指定的文件不存在时报错。
+配置文件选择顺序为 `--config`、插件的 PLUGIN_CONFIG、`COOLP_CONFIG`、当前目录的 coolp.yaml / coolp.yml / coolp.json。应用入口选定显式路径后交给共用加载器；自动发现只检查当前目录，存在多个候选文件时报错。render 与 serve 没有文件时使用内置默认值及环境变量，batch 需要有 jobs 的配置。显式指定的文件不存在时报错。
 
 配置文件中的相对路径以文件目录为基准，CLI 或环境变量中的相对路径以工作目录为基准。batch 的 output 相对最终 output-dir 解析，重复输出目标在生成前报错。render 不读取 jobs 中的参数；batch 按每项 card 选择对应定义；serve 不执行 jobs。
 
@@ -289,6 +291,8 @@ export COOLP__CARDS='{"snake":{"params":{"subject":"another-user"}},"profile/ove
 
 COOLP__CARDS 的值与文件的 cards 区域同构，可同时设置多张卡的 render 和 params，也支持含斜杠的 ID。这样无需把 ID 编码成有歧义的环境变量名。数组和对象使用 JSON，标量依据 schema 转换；空字符串保留为空值，不能隐式表示未配置。未知 COOLP__ 字段报错。其他应用或系统环境变量不参与参数合并。
 
+同一组环境变量不能同时给父对象和子字段赋值，例如 COOLP__RUNTIME__SERVER 与 COOLP__RUNTIME__SERVER__PORT 同时存在会报冲突，避免覆盖取决于变量枚举顺序。
+
 provider 的 token-env 指定凭证环境变量名，GitHub/CNB 默认分别使用 GITHUB_TOKEN、CNB_TOKEN；使用数据源时按适配器的认证要求解析，未使用的来源不强制提供凭证。不执行通用字符串插值。凭证值不属于请求参数，错误和配置预览均脱敏。
 
 ### 覆盖顺序
@@ -299,6 +303,7 @@ provider 的 token-env 指定凭证环境变量名，GitHub/CNB 默认分别使�
 应用内置 runtime 默认值
   < 文件 runtime
   < COOLP__RUNTIME__*
+  < 插件运行设置
   < 启动命令的运行选项
 ```
 
@@ -323,7 +328,7 @@ provider 的 token-env 指定凭证环境变量名，GitHub/CNB 默认分别使�
 
 batch 的 --locale、--theme、--format、--seed 覆盖每项公共媒体设置；卡片参数在各 job 或 cards[id].params 中配置，batch 不接受某一张卡专属的命令参数。serve 的启动选项只配置 runtime，每个请求的卡片参数由 URL 指定并覆盖部署默认值。
 
-CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card 可来自 PLUGIN_CARD。公共字段映射到媒体或交付设置，其余字段按当前卡片 schema 映射到 params，连字符对应单下划线。PLUGIN_PARAMS 支持整个 params 的 JSON；同一字段同时由 PLUGIN_PARAMS 和独立 settings 提供时报重复输入错误。GitHub Action inputs 映射为命令参数。此适配层不再定义一套默认值。
+CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card 可来自 PLUGIN_CARD。公共字段映射到媒体、交付或运行设置，其余字段按当前卡片 schema 映射到 params。适配器将环境变量名中的下划线归一为连字符，也接受保留连字符的键；归一后重复的字段会报错。PLUGIN_PARAMS 支持整个 params 的 JSON，同一字段同时由 PLUGIN_PARAMS 和独立 settings 提供时报重复输入错误。GitHub Action inputs 映射为命令参数。此适配层不再定义一套默认值。
 
 ### 校验与诊断
 
@@ -401,6 +406,7 @@ origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](htt
 ## 技术依据
 
 - [Zod 严格对象、类型推导和校验](https://zod.dev/api)、[JSON Schema 导出](https://zod.dev/json-schema)
+- [YAML 配置解析](https://github.com/eemeli/yaml)
 - [pnpm workspace](https://pnpm.io/workspaces)、[catalog](https://pnpm.io/catalogs)
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter/config)、[Oxfmt](https://oxc.rs/docs/guide/usage/formatter/config)、[prek](https://prek.j178.dev/local-hooks/)
 - [tsdown](https://tsdown.dev/)、[Vitest](https://vitest.dev/)、[Vite](https://vite.dev/)

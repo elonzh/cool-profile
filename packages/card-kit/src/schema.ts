@@ -11,6 +11,7 @@ function missingAt(value: unknown, path: readonly PropertyKey[]): boolean {
   let current = value;
   for (const key of path) {
     if (typeof current !== 'object' || current === null) return false;
+    if (Array.isArray(current)) return false;
     if (!Object.hasOwn(current, key)) return true;
     current = Reflect.get(current, key);
   }
@@ -23,12 +24,13 @@ function blocksPatch(
   base: readonly PropertyKey[] = [],
 ): boolean {
   const path = [...base, ...issue.path];
+  if (missingAt(input, path)) return false;
   if (issue.code === 'invalid_union') {
     return !issue.errors.some((branch) =>
       branch.every((child) => !blocksPatch(child, input, path)),
     );
   }
-  return !(issue.code === 'invalid_type' && missingAt(input, path));
+  return true;
 }
 
 export function issueMessage(issue: z.core.$ZodIssue): string {

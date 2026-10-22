@@ -8,6 +8,7 @@ const parameterPattern = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
 const marker = Symbol.for('coolp.card');
 const reserved = new Set([
   'card',
+  'params',
   'format',
   'theme',
   'locale',

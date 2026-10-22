@@ -118,6 +118,15 @@ describe('card definitions', () => {
 });
 
 describe('partial configuration validation', () => {
+  it('defers absent enum fields and validates complete array elements', () => {
+    const schema = z.strictObject({
+      mode: z.enum(['first', 'second']),
+      items: z.array(z.strictObject({ required: z.string() })),
+    });
+    expect(() => validatePatch(schema, {}, 'fragment')).not.toThrow();
+    expect(() => validatePatch(schema, { mode: 'other' }, 'fragment')).toThrow();
+    expect(() => validatePatch(schema, { items: [{}] }, 'fragment')).toThrow();
+  });
   it('allows recursively absent fields before overlay resolution', () => {
     expect(() =>
       validatePatch(params, { settings: { active: false } }, 'environment'),
