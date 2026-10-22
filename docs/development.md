@@ -19,7 +19,7 @@ Oxlint 检查代码，Oxfmt 处理格式，TypeScript 开启严格类型检查�
 
 | Remote   | 地址                                         |
 | -------- | -------------------------------------------- |
-| `origin` | `https://cnb.cool/elonzh/cnb/cool-profile`   |
+| `origin` | `https://cnb.cool/elonzh/cool-profile`       |
 | `github` | `https://github.com/elonzh/cool-profile.git` |
 
 两个远程共用同一条 `main` 历史。完成提交后执行：
