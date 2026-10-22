@@ -11,6 +11,8 @@ import * as z from 'zod';
 import { setTimeout as delay } from 'node:timers/promises';
 import { svgDocument } from '../packages/graphics/src/index.js';
 import { cards } from '../cards/stats/src/index.js';
+import { cards as cityCards } from '../cards/contrib-3d/src/index.js';
+import { cards as shooterCards } from '../cards/space-shooter/src/index.js';
 import { loadConfiguration, resolveCardRequest } from '../apps/coolp/src/config/index.js';
 import { createRenderer } from '../apps/coolp/src/render.js';
 import { createImageServer } from '../apps/coolp/src/server.js';
@@ -22,7 +24,7 @@ import {
   fixtureFetch,
 } from './fixtures/upstream.js';
 
-const registry = createCardRegistry(cards);
+const registry = createCardRegistry([...cards, ...cityCards, ...shooterCards]);
 const servers: Server[] = [];
 const folders: string[] = [];
 afterEach(async () => {
@@ -123,6 +125,41 @@ it('changes the ETag when live data changes and reports upstream failures as JSO
   );
   expect(response.status).toBe(502);
   expect(await response.text()).not.toContain('private upstream content');
+});
+
+it('serves city and shooter formats and rejects future calendar years as request errors', async () => {
+  const configuration = await loadConfiguration(registry, { cwd: await folder(), environment: {} });
+  const renderer = await createRenderer({
+    registry,
+    configuration,
+    environment: fixtureEnvironment,
+    fetch: fixtureFetch(),
+    now: () => fixedNow,
+  });
+  const port = await listen(createImageServer({ registry, configuration, renderer }));
+  const base = 'http://127.0.0.1:' + port + '/v1/cards/';
+  const city = base + 'contrib-3d.svg?source=cnb&subject=author&animate=false';
+  const expected = await renderer.render(
+    resolveCardRequest(configuration, registry, 'contrib-3d', {
+      inputs: [{ source: 'test', params: { source: 'cnb', subject: 'author', animate: false } }],
+    }),
+  );
+  expect(Buffer.from(await (await fetch(city)).arrayBuffer())).toEqual(expected.bytes);
+  expect((await fetch(city.replace('.svg', '.png'))).headers.get('content-type')).toBe('image/png');
+  expect(
+    (await fetch(city.replace('animate=false', 'animate=true').replace('.svg', '.png'))).status,
+  ).toBe(400);
+  const invalid = await fetch(city + '&year=9999');
+  expect(invalid.status).toBe(400);
+  expect(await invalid.text()).toContain('year');
+  for (const format of ['gif', 'webp']) {
+    const response = await fetch(
+      base + 'space-shooter.' + format + '?source=cnb&subject=author&strategy=row&fps=5&duration=8',
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/' + format);
+    expect((await response.arrayBuffer()).byteLength).toBeGreaterThan(100);
+  }
 });
 
 async function cli(
@@ -236,6 +273,70 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(preview.stdout.toString()).not.toContain('fixture-github-token');
   const invalid = await cli(['render', 'stats', '--subject', 'author'], environment);
   expect(invalid.code).toBe(2);
+  const city = await cli(
+    [
+      'render',
+      'contrib-3d',
+      '--config',
+      config,
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--format',
+      'png',
+      '-o',
+      '-',
+    ],
+    environment,
+  );
+  expect(city.code, city.stderr).toBe(0);
+  expect(city.stdout.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  const future = await cli(
+    ['render', 'contrib-3d', '--source', 'cnb', '--subject', 'author', '--year', '9999', '-o', '-'],
+    environment,
+  );
+  expect(future.code).toBe(2);
+  expect(future.stderr).toContain('year');
+  const previewFuture = await cli(
+    [
+      'render',
+      'contrib-3d',
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--year',
+      '9999',
+      '--dry-run',
+    ],
+    environment,
+  );
+  expect(previewFuture.code).toBe(2);
+  expect(previewFuture.stderr).toContain('year');
+  const shooter = await cli(
+    [
+      'render',
+      'space-shooter',
+      '--config',
+      config,
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--fps',
+      '5',
+      '--duration',
+      '8',
+      '--format',
+      'webp',
+      '-o',
+      '-',
+    ],
+    environment,
+  );
+  expect(shooter.code, shooter.stderr).toBe(0);
+  expect(shooter.stdout.subarray(8, 12).toString()).toBe('WEBP');
 }, 15000);
 
 it('limits concurrent drawing and encoding and releases a failed job for the next request', async () => {

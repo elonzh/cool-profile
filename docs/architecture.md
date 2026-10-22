@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。太空射击、3D、语言/仓库卡、统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。语言/仓库卡、统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -86,7 +86,11 @@ interface CardDefinition<S extends z.ZodObject, Data> {
   themes: readonly string[];
   locales: readonly string[];
   defaults?(media: MediaOptions): Partial<z.output<S>>;
-  validate?(params: z.output<S>, media: MediaOptions): readonly ValidationIssue[];
+  validate?(
+    params: z.output<S>,
+    media: MediaOptions,
+    ctx: ValidationContext,
+  ): readonly ValidationIssue[];
   load(ctx: LoadContext, params: z.output<S>): Promise<Data>;
   render(ctx: RenderContext, data: Data, params: z.output<S>): Graphic | Promise<Graphic>;
 }
@@ -95,7 +99,7 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 - formats 第一项为默认格式；themes 包含 default，locales 包含 zh-CN，首期卡片同时提供 en。
 - params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params 及 CLI 控制选项是保留名，不能重复声明。
 - defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
-- validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。
+- validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。ValidationContext 提供应用传入的 now；三个日历卡复用数据包的年份与时区规则，未来年份在 CLI、URL 和 dry-run 中都会被拒绝。
 - LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置和 text 排版函数，图元由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
 
 defineCard 将 load 和 render 封装为内部 prepare 方法，先取得快照，再返回保留类型信息的绘图函数。应用记录本次使用的快照版本及权限作用域，在绘图与编码之前查询媒体缓存。缓存仅属于应用实例；共享取数任务使用独立超时，某个 HTTP 客户端取消请求不取消其他消费者。
@@ -214,6 +218,10 @@ CLI 省略 format、URL 省略扩展名时采用同一默认格式。URL 在最�
 参考用于理解算法与效果，代码重新实现。四类效果同时支持 GitHub/CNB，统计卡使用来源实际提供的指标。Gist/WakaTime 首期范围仍待确定。
 
 日历卡缺省读取最近 365 天，year 指定来源时区下的日历年份。累计指标保留原始统计范围。太空射击 strategy 支持 column、row、random，默认 random；fps 默认 40。3D 的 animate 在 SVG 下默认 true、PNG 下默认 false。
+
+space-shooter 的 duration 默认 20 秒，允许 8..24；fps 允许 5..40。模拟按时间推进，与采样帧率独立。column 按列逐个清除，row 从底行向上清除，random 使用 seed 随机选列；每次命中该列最下方的存活目标。先瞄准、发射，再在命中时消除，累计原始活跃分或贡献数，清除后飞船回到起点。
+
+contrib-3d 提供 default、dark、season、rainbow、blocks 主题。日历按周与星期投影，楼高对原始数值做对数缩放，积木主题量化高度并绘制凸点；夜景绘制窗灯，季节配色跟随每个日期的月份。零活跃日保留地块，中英文月份按实际字宽避让。SVG 可使用 animate=false 输出静态图；PNG 与 animate=true 的组合在取数前报错。
 
 snake 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。
 
@@ -348,7 +356,7 @@ CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card �
 
 时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。GitHub 日历按 UTC 日期、CNB 按 Asia/Shanghai 日期解析，统计卡的提交、议题和合并请求使用最近 365 天的平台计数；获赞汇总完整分页的公开 Owner 仓库，公开仓库数使用平台资料字段。CNB 活跃分与 GitHub 贡献数保留各自名称与等级语义。HTTP、响应结构或认证失败直接报错，不替换成零值。
 
-Noto Sans SC 可变字体及 OFL 授权文件随应用放在 assets/fonts。Fontkit 根据字体生成文字矢量路径，text 支持字重、测量、对齐和省略；SVG 保留可访问名称，渲染时不依赖系统字体或外部字体服务。PNG 由 resvg-js 使用同一份 SVG 生成。GIF/WebP 逐帧绘制并压缩为 PNG，再由 sharp 连接为动画，保留总时长和无限循环；GIF 按累计时间舍入到百分之一秒，避免 40 fps 的帧间隔取整后改变速度。原生编码依赖从 bundle 外加载，应用包声明运行依赖。
+Noto Sans SC 可变字体及 OFL 授权文件随应用放在 assets/fonts。Fontkit 根据字体生成文字矢量路径，text 支持字重、测量、对齐和省略；SVG 保留可访问名称，渲染时不依赖系统字体或外部字体服务。PNG 由 resvg-js 使用同一份 SVG 生成。GIF/WebP 逐帧绘制并压缩为 PNG，再由 sharp 连接为动画，保留总时长和无限循环；GIF 按累计时间舍入到百分之一秒，避免 40 fps 的帧间隔取整后改变速度；WebP 保留毫秒精度。原生编码依赖从 bundle 外加载，应用包声明运行依赖。
 
 server 本地默认监听 127.0.0.1:3000，容器显式使用 host=0.0.0.0。GET/HEAD `/v1/cards/<完整 ID>[.<format>]` 交付媒体，设置 Content-Type 与基于内容的 ETag，支持缓存和条件请求。媒体缓存键包含最终规范化参数、数据版本、权限作用域和渲染版本，不包含 CLI 文件位置。
 

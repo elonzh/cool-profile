@@ -35,9 +35,10 @@ export async function encodeGraphic(graphic: Graphic, format: MediaFormat): Prom
     frames.push(new Resvg(svg, { font: { loadSystemFonts: false } }).render().asPng());
     if (animation) {
       // GIF stores centiseconds; accumulate rounding so 40 fps keeps its total duration.
-      const start = Math.round((index * animation.durationMs) / frameCount / 10);
-      const end = Math.round(((index + 1) * animation.durationMs) / frameCount / 10);
-      delay.push((end - start) * 10);
+      const quantum = format === 'gif' ? 10 : 1;
+      const start = Math.round((index * animation.durationMs) / frameCount / quantum);
+      const end = Math.round(((index + 1) * animation.durationMs) / frameCount / quantum);
+      delay.push((end - start) * quantum);
     }
     await setImmediate();
   }

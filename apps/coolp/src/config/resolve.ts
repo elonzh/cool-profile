@@ -78,7 +78,7 @@ export function resolveCardRequest(
   configuration: Configuration,
   registry: ReadonlyMap<string, Card>,
   id: string,
-  options: { jobIndex?: number; inputs?: readonly RequestLayer[] } = {},
+  options: { jobIndex?: number; inputs?: readonly RequestLayer[]; now?: Date } = {},
 ): ResolvedRequest {
   const card = requireCard(registry, id);
   const inputs = (options.inputs ?? []).map((input) => {
@@ -152,7 +152,9 @@ export function resolveCardRequest(
     }
   }
   const params = parseResolved(card.params, paramsValues, origins, ['params'], 'request ' + id);
-  const issues = card.validate(params, media);
+  const issues = card.validate(params, media, {
+    now: new Date(options.now?.getTime() ?? Date.now()),
+  });
   if (issues.length) {
     throw new ConfigurationError(
       issues

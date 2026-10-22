@@ -17,11 +17,10 @@ export function calendarWindow(
     query.year !== undefined &&
     (!Number.isInteger(query.year) || query.year < 1000 || query.year > currentYear)
   ) {
-    throw new DataError('year must be a calendar year no later than today', 'configuration');
+    throw new DataError('year must be a calendar year no later than today', 'input');
   }
   if (query.from !== undefined || query.to !== undefined) {
-    if (query.year !== undefined)
-      throw new DataError('Select year or a date window', 'configuration');
+    if (query.year !== undefined) throw new DataError('Select year or a date window', 'input');
     const from = query.from ?? dayOffset(today, -364);
     const to = query.to ?? today;
     if (
@@ -30,13 +29,29 @@ export function calendarWindow(
       to > today ||
       (Date.parse(to) - Date.parse(from)) / 86_400_000 > 365
     ) {
-      throw new DataError('Invalid activity date window', 'configuration');
+      throw new DataError('Invalid activity date window', 'input');
     }
     return { from, to };
   }
   return query.year === undefined
     ? { from: dayOffset(today, -364), to: today }
     : { from: query.year + '-01-01', to: query.year < currentYear ? query.year + '-12-31' : today };
+}
+
+export function validateCalendarYear(
+  year: number | undefined,
+  source: 'github' | 'cnb',
+  now: Date,
+): readonly { path: string; message: string }[] {
+  if (year === undefined) return [];
+  try {
+    calendarWindow({ year }, now, source === 'cnb' ? 'Asia/Shanghai' : 'UTC');
+    return [];
+  } catch (error) {
+    if (error instanceof DataError && error.kind === 'input')
+      return [{ path: 'year', message: error.message }];
+    throw error;
+  }
 }
 
 export function dayOffset(date: string, amount: number): string {

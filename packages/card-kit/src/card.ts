@@ -45,6 +45,9 @@ export interface RenderContext {
   media: Readonly<MediaOptions>;
   text: TextRenderer;
 }
+export interface ValidationContext {
+  now: Date;
+}
 
 export interface CardDefinition<S extends z.ZodObject, Data> {
   id: string;
@@ -53,7 +56,11 @@ export interface CardDefinition<S extends z.ZodObject, Data> {
   themes: readonly string[];
   locales: readonly string[];
   defaults?(media: MediaOptions): Partial<z.output<S>>;
-  validate?(params: z.output<S>, media: MediaOptions): readonly ValidationIssue[];
+  validate?(
+    params: z.output<S>,
+    media: MediaOptions,
+    context: ValidationContext,
+  ): readonly ValidationIssue[];
   load(ctx: LoadContext, params: z.output<S>): Promise<Data>;
   render(ctx: RenderContext, data: Data, params: z.output<S>): Graphic | Promise<Graphic>;
 }
@@ -67,7 +74,11 @@ export interface Card {
   readonly themes: readonly string[];
   readonly locales: readonly string[];
   defaults(media: MediaOptions): Record<string, unknown>;
-  validate(params: Record<string, unknown>, media: MediaOptions): readonly ValidationIssue[];
+  validate(
+    params: Record<string, unknown>,
+    media: MediaOptions,
+    context: ValidationContext,
+  ): readonly ValidationIssue[];
   prepare(
     loadContext: LoadContext,
     params: Record<string, unknown>,
@@ -152,8 +163,8 @@ export function defineCard<S extends z.ZodObject, Data>(definition: CardDefiniti
     themes: Object.freeze([...definition.themes]),
     locales: Object.freeze([...definition.locales]),
     defaults,
-    validate(params, media) {
-      return definition.validate?.(definition.params.parse(params), media) ?? [];
+    validate(params, media, context) {
+      return definition.validate?.(definition.params.parse(params), media, context) ?? [];
     },
     async prepare(loadContext, rawParams) {
       const params = definition.params.parse(rawParams);

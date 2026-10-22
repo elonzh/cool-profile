@@ -3,7 +3,7 @@ import { AsyncCache, stableKey } from './cache.js';
 export class DataError extends Error {
   constructor(
     message: string,
-    readonly kind: 'configuration' | 'not-found' | 'upstream' = 'upstream',
+    readonly kind: 'configuration' | 'input' | 'not-found' | 'upstream' = 'upstream',
     readonly status?: number,
   ) {
     super(message);

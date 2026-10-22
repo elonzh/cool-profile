@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./calendar": "./src/window.ts",
     "./types": "./src/types.ts"
   },
   "dependencies": {

@@ -105,6 +105,7 @@ it('encodes moving GIF/WebP with exact duration, dimensions, looping and determi
     expect(metadata.pages).toBe(12);
     expect(metadata.loop).toBe(0);
     expect(metadata.delay!.reduce((sum, value) => sum + value, 0)).toBe(300);
+    if (format === 'webp') expect(metadata.delay!.every((delay) => delay === 25)).toBe(true);
     const first = await sharp(media.bytes, { page: 0 }).png().toBuffer();
     const last = await sharp(media.bytes, { page: 11 }).png().toBuffer();
     expect(first).not.toEqual(last);

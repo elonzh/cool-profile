@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { defineCard } from '@cool-profile/card-kit';
+import { validateCalendarYear } from '@cool-profile/data/calendar';
 import { drawSnake } from './draw.js';
 
 export const cards = [
@@ -16,6 +17,7 @@ export const cards = [
     themes: ['default', 'dark', 'rainbow'],
     locales: ['zh-CN', 'en'],
     defaults: () => ({ fps: 20, duration: 12 }),
+    validate: (params, _media, ctx) => validateCalendarYear(params.year, params.source, ctx.now),
     async load(ctx, params) {
       return ctx.data.read({
         kind: 'activity',

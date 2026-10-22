@@ -4,13 +4,21 @@
 
 把动态信息变成图片与动画，嵌入个人主页、README 和网站。
 
-支持 GitHub 与 CNB，默认中文，可选英文和多种主题。当前提供统计卡片与贪吃蛇动画；太空射击和 3D 活跃日历开发中。
+支持 GitHub 与 CNB，默认中文，可选英文和多种主题。提供贪吃蛇、太空射击、3D 活跃日历和统计卡片。
 
 ## 效果
 
 ![CNB 贪吃蛇](cards/snake/examples/cnb-default.zh-CN.svg)
 
 ![GitHub 彩虹贪吃蛇](cards/snake/examples/github-rainbow.zh-CN.svg)
+
+![CNB 3D 活跃日历](cards/contrib-3d/examples/cnb-default.zh-CN.svg)
+
+![GitHub 积木日历](cards/contrib-3d/examples/github-blocks.zh-CN.svg)
+
+![CNB 太空射击](cards/space-shooter/examples/cnb-default.zh-CN.gif)
+
+![GitHub 街机太空射击](cards/space-shooter/examples/github-arcade.zh-CN.gif)
 
 ![CNB 中文统计卡](cards/stats/examples/cnb-default.zh-CN.svg)
 
@@ -30,6 +38,8 @@ GitHub 使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`；CNB 令牌需要 `accoun
 ```sh
 pnpm coolp render snake --source cnb --subject elonzh --output snake.svg
 pnpm coolp render snake --source github --subject elonzh --format gif --theme rainbow --output snake.gif
+pnpm coolp render contrib-3d --source cnb --subject elonzh --format png --theme blocks --output city.png
+pnpm coolp render space-shooter --source github --subject elonzh --theme arcade --output shooter.gif
 pnpm coolp render stats --source cnb --subject elonzh --output stats.svg
 pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
 ```

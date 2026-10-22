@@ -231,7 +231,7 @@ async function main(
     );
     return error instanceof ConfigurationError ||
       error instanceof CardNotFoundError ||
-      (error instanceof DataError && error.kind === 'configuration')
+      (error instanceof DataError && ['configuration', 'input'].includes(error.kind))
       ? 2
       : 1;
   }

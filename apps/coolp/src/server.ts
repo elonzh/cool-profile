@@ -54,7 +54,8 @@ export function createImageServer(options: {
         error instanceof CardNotFoundError ||
         (error instanceof DataError && error.kind === 'not-found')
           ? 404
-          : error instanceof ConfigurationError
+          : error instanceof ConfigurationError ||
+              (error instanceof DataError && error.kind === 'input')
             ? 400
             : error instanceof DataError
               ? 502
