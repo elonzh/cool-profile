@@ -152,6 +152,9 @@ importers:
       '@cool-profile/card-kit':
         specifier: workspace:*
         version: link:../../packages/card-kit
+      '@cool-profile/data':
+        specifier: workspace:*
+        version: link:../../packages/data
       '@cool-profile/graphics':
         specifier: workspace:*
         version: link:../../packages/graphics

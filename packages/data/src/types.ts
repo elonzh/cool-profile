@@ -34,21 +34,33 @@ export interface ProfileStats {
 export interface Language {
   name: string;
   value: number;
-  unit: string;
   color: string;
+}
+
+export interface LanguageBreakdown {
+  unit: 'bytes' | 'repositories';
+  scope: string;
+  repositoryCount: number;
+  classifiedRepositories: number;
+  languages: readonly Language[];
 }
 
 export interface Repository {
   name: string;
   description: string;
   url: string;
+  language: { name: string; color: string } | null;
+  license: string | null;
   metrics: readonly Metric[];
 }
 
 export interface DataCapabilities {
   activity: { query: Resource & TimeWindow; data: Activity };
   'profile-stats': { query: Resource; data: ProfileStats };
-  languages: { query: Resource; data: readonly Language[] };
+  languages: {
+    query: Resource & { metric?: 'bytes' | 'repositories'; 'include-forks'?: boolean };
+    data: LanguageBreakdown;
+  };
   repository: { query: Resource; data: Repository };
 }
 

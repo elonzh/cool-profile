@@ -24,6 +24,10 @@ Supports GitHub and CNB, with Chinese as the default, English output, and multip
 
 ![GitHub dark statistics card](cards/stats/examples/github-dark.en.svg)
 
+![CNB language distribution](cards/stats/examples/languages-cnb-default.en.svg)
+
+![GitHub dark repository card](cards/stats/examples/repo-github-dark.en.svg)
+
 ## Usage
 
 Requires Node.js 24+ and pnpm. Run these commands once from the repository:
@@ -33,7 +37,7 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Set `GITHUB_TOKEN` for GitHub or `CNB_TOKEN` for CNB. CNB tokens need `account-profile:r` and `account-engage:r` permissions.
+GitHub stats and calendars use `GITHUB_TOKEN`; CNB uses `CNB_TOKEN`. CNB tokens need `account-profile:r` and `account-engage:r`; repository cards also need `repo-basic-info:r`.
 
 ```sh
 pnpm coolp render snake --source cnb --subject elonzh --locale en --output snake.svg
@@ -42,9 +46,13 @@ pnpm coolp render contrib-3d --source cnb --subject elonzh --format png --theme 
 pnpm coolp render space-shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
 pnpm coolp render stats --source cnb --subject elonzh --locale en --output stats.svg
 pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+pnpm coolp render languages --source cnb --subject elonzh --locale en --output languages.svg
+pnpm coolp render repo --source github --subject Platane/snk --theme dark --locale en --output repo.svg
 ```
 
-Replace subject with your account. For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发).
+Replace subject with your account, or a full repository path for repo cards. Languages default to code bytes on GitHub and repository counts on CNB. Use `--metric repositories` on either platform to count repos by primary language.
+
+For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发).
 
 Start the image server:
 

@@ -179,6 +179,121 @@ async function cli(
   return { code, stdout: Buffer.concat(stdout), stderr: Buffer.concat(stderr).toString() };
 }
 
+it('delivers identical language and repository media through CLI, plugin settings and HTTP', async () => {
+  const port = await listen(
+    createServer((request, response) => {
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify(fixtureApi(new URL(request.url!, 'http://fixture'))));
+    }),
+  );
+  const cwd = await folder();
+  const config = resolve(cwd, 'coolp.json');
+  await writeFile(
+    config,
+    JSON.stringify({
+      runtime: {
+        providers: {
+          github: { 'base-url': 'http://127.0.0.1:' + port + '/github' },
+          cnb: { 'base-url': 'http://127.0.0.1:' + port + '/cnb' },
+        },
+      },
+    }),
+  );
+  const configuration = await loadConfiguration(registry, { cwd, environment: {} });
+  const renderer = await createRenderer({
+    registry,
+    configuration,
+    environment: fixtureEnvironment,
+    fetch: fixtureFetch(),
+    now: () => fixedNow,
+  });
+  const imagePort = await listen(createImageServer({ registry, configuration, renderer }));
+  const environment = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([key]) => !key.startsWith('PLUGIN_') && !key.startsWith('COOLP_'),
+      ),
+    ),
+    ...fixtureEnvironment,
+  };
+  for (const id of ['languages', 'repo'])
+    for (const source of ['github', 'cnb']) {
+      const params = {
+        source,
+        subject:
+          id === 'languages'
+            ? 'author'
+            : source === 'github'
+              ? 'author/project'
+              : 'author/group/project',
+      };
+      const media = { locale: 'en', theme: 'dark', format: 'png' as const };
+      const expected = await renderer.render(
+        resolveCardRequest(configuration, registry, id, {
+          inputs: [{ source: 'test', params, render: media }],
+        }),
+      );
+      const url =
+        'http://127.0.0.1:' +
+        imagePort +
+        '/v1/cards/' +
+        id +
+        '.png?' +
+        new URLSearchParams({ ...params, locale: 'en', theme: 'dark' });
+      const response = await fetch(url);
+      expect(response.status).toBe(200);
+      expect(Buffer.from(await response.arrayBuffer())).toEqual(expected.bytes);
+      const result = await cli(
+        [
+          'render',
+          id,
+          '--config',
+          config,
+          '--params',
+          JSON.stringify(params),
+          '--locale',
+          'en',
+          '--theme',
+          'dark',
+          '--format',
+          'png',
+          '-o',
+          '-',
+        ],
+        environment,
+      );
+      expect(result.code, result.stderr).toBe(0);
+      expect(result.stdout).toEqual(expected.bytes);
+    }
+  const plugin = await cli(['render'], {
+    ...environment,
+    PLUGIN_CARD: 'languages',
+    PLUGIN_CONFIG: config,
+    PLUGIN_PARAMS: '{"source":"cnb","subject":"author","include-forks":true,"limit":1}',
+    PLUGIN_OUTPUT: '-',
+  });
+  expect(plugin.code, plugin.stderr).toBe(0);
+  expect(plugin.stdout.toString()).toContain('其他语言');
+  const invalidUrl =
+    'http://127.0.0.1:' + imagePort + '/v1/cards/languages?source=cnb&subject=author&metric=bytes';
+  expect((await fetch(invalidUrl)).status).toBe(400);
+  const invalid = await cli(
+    [
+      'render',
+      'languages',
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--metric',
+      'bytes',
+      '--dry-run',
+    ],
+    environment,
+  );
+  expect(invalid.code).toBe(2);
+}, 15000);
+
 it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes', async () => {
   const upstream = createServer(async (request, response) => {
     const chunks: Buffer[] = [];

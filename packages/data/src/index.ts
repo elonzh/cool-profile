@@ -4,10 +4,13 @@ import { DataError, sourceHttp } from './http.js';
 import type { ProviderOptions } from './http.js';
 import type { DataCapabilities, DataClient, DataKind, DataRequest, Snapshot } from './types.js';
 import { loadActivity, loadProfileStats } from './adapters.js';
+import { loadLanguages } from './languages.js';
+import { loadRepository } from './repositories.js';
 import { calendarWindow } from './window.js';
 
 export { AsyncCache, stableKey, waitFor } from './cache.js';
 export { DataError } from './http.js';
+export { limitConcurrency, defaultProviderConcurrency } from './concurrency.js';
 export type { ProviderOptions } from './http.js';
 
 export function createDataClient(options: {
@@ -63,12 +66,9 @@ export function createDataClient(options: {
             ? await loadActivity(http, query as DataRequest<'activity'>, collectedAt)
             : query.kind === 'profile-stats'
               ? await loadProfileStats(http, query as DataRequest<'profile-stats'>, collectedAt)
-              : (() => {
-                  throw new DataError(
-                    'Data capability is not implemented: ' + query.kind,
-                    'configuration',
-                  );
-                })();
+              : query.kind === 'languages'
+                ? await loadLanguages(http, query as DataRequest<'languages'>)
+                : await loadRepository(http, query as DataRequest<'repository'>);
         return freezeData({
           source: query.source,
           subject: query.subject,

@@ -6,6 +6,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./calendar": "./src/window.ts",
+    "./repository-subject": "./src/repository-subject.ts",
     "./types": "./src/types.ts"
   },
   "dependencies": {

@@ -24,6 +24,10 @@
 
 ![GitHub 深色统计卡](cards/stats/examples/github-dark.zh-CN.svg)
 
+![CNB 语言分布](cards/stats/examples/languages-cnb-default.zh-CN.svg)
+
+![GitHub 深色仓库卡](cards/stats/examples/repo-github-dark.zh-CN.svg)
+
 ## 使用
 
 需要 Node.js 24+ 和 pnpm。在仓库目录首次执行：
@@ -33,7 +37,7 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-GitHub 使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`；CNB 令牌需要 `account-profile:r`、`account-engage:r` 权限。
+GitHub 统计与日历使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`。CNB 令牌需要 `account-profile:r`、`account-engage:r`；仓库卡还需要 `repo-basic-info:r`。
 
 ```sh
 pnpm coolp render snake --source cnb --subject elonzh --output snake.svg
@@ -42,9 +46,13 @@ pnpm coolp render contrib-3d --source cnb --subject elonzh --format png --theme 
 pnpm coolp render space-shooter --source github --subject elonzh --theme arcade --output shooter.gif
 pnpm coolp render stats --source cnb --subject elonzh --output stats.svg
 pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+pnpm coolp render languages --source cnb --subject elonzh --output languages.svg
+pnpm coolp render repo --source github --subject Platane/snk --theme dark --output repo.svg
 ```
 
-将 subject 换成你的账号。批量生成使用 `pnpm coolp batch --config coolp.yaml`，配置方式见[配置示例](docs/architecture.md#配置结构与下发)。
+将 subject 换成你的账号，仓库卡则填写完整仓库路径。语言卡默认统计 GitHub 代码字节、CNB 仓库数，使用 `--metric repositories` 可在两个平台上按主要语言统计仓库数。
+
+批量生成使用 `pnpm coolp batch --config coolp.yaml`，配置方式见[配置示例](docs/architecture.md#配置结构与下发)。
 
 启动图片服务：
 

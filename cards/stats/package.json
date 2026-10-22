@@ -5,6 +5,7 @@
   "type": "module",
   "dependencies": {
     "@cool-profile/card-kit": "workspace:*",
+    "@cool-profile/data": "workspace:*",
     "@cool-profile/graphics": "workspace:*",
     "zod": "catalog:"
   },

@@ -1,6 +1,12 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { createDataClient, AsyncCache, stableKey, waitFor } from '@cool-profile/data';
+import {
+  createDataClient,
+  AsyncCache,
+  stableKey,
+  waitFor,
+  limitConcurrency,
+} from '@cool-profile/data';
 import type { DataClient } from '@cool-profile/data/types';
 import { createTextRenderer } from '@cool-profile/graphics';
 import { encodeGraphic } from '@cool-profile/graphics/encode';
@@ -18,22 +24,6 @@ export interface Renderer {
   render(request: ResolvedRequest, signal?: AbortSignal): Promise<RenderedMedia>;
 }
 
-function renderQueue(concurrency: number) {
-  let running = 0;
-  const waiting: (() => void)[] = [];
-  return async <T>(work: () => Promise<T>): Promise<T> => {
-    if (running >= concurrency) await new Promise<void>((resolve) => waiting.push(resolve));
-    else running++;
-    try {
-      return await work();
-    } finally {
-      const next = waiting.shift();
-      if (next) next();
-      else running--;
-    }
-  };
-}
-
 export async function createRenderer(options: {
   registry: ReadonlyMap<string, Card>;
   configuration: Configuration;
@@ -43,8 +33,9 @@ export async function createRenderer(options: {
 }): Promise<Renderer> {
   const { configuration, registry } = options;
   const font = await readFile(new URL('../assets/fonts/NotoSansSC.ttf', import.meta.url));
-  const text = createTextRenderer(font);
-  const fontVersion = createHash('sha256').update(font).digest('hex');
+  const emoji = await readFile(new URL('../assets/fonts/NotoEmoji.ttf', import.meta.url));
+  const text = createTextRenderer(font, [emoji]);
+  const fontVersion = createHash('sha256').update(font).update(emoji).digest('hex');
   const data = createDataClient({
     providers: configuration.runtime.providers,
     cache: configuration.runtime.cache,
@@ -56,7 +47,7 @@ export async function createRenderer(options: {
     configuration.runtime.cache.ttl * 1000,
     configuration.runtime.cache['max-entries'],
   );
-  const encode = renderQueue(configuration.runtime['render-concurrency']);
+  const encode = limitConcurrency(configuration.runtime['render-concurrency']);
   return {
     async render(request, signal) {
       signal?.throwIfAborted();

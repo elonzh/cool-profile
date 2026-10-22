@@ -1,10 +1,12 @@
 import * as z from 'zod';
-import type { Activity, DataRequest, Metric, ProfileStats } from './types.js';
+import type { Activity, DataRequest, ProfileStats } from './types.js';
 import { DataError } from './http.js';
 import type { SourceHttp } from './http.js';
 import { calendarWindow, dates, validDate } from './window.js';
 
-const count = z.number().int().nonnegative();
+import { count, decode, metric } from './response.js';
+import { publicRepos } from './repositories.js';
+
 const cnbDaySchema = z.object({
   score: z.number().nonnegative(),
   commit_count: count,
@@ -32,82 +34,6 @@ const ghContributionsSchema = z.object({
     weeks: z.array(z.object({ contributionDays: z.array(ghDaySchema) })),
   }),
 });
-
-function decode<S extends z.ZodType>(schema: S, value: unknown, source: string): z.output<S> {
-  const result = schema.safeParse(value);
-  if (!result.success) {
-    throw new DataError(
-      source +
-        ' API returned invalid data at ' +
-        result.error.issues.map((issue) => issue.path.join('.')).join(', '),
-    );
-  }
-  return result.data;
-}
-
-function metric(id: string, value: number, scope: string): Metric {
-  return { id, value, scope, unit: 'count' };
-}
-
-async function publicRepos(http: SourceHttp, username: string): Promise<{ stars: number }[]> {
-  const result: { stars: number }[] = [];
-  const seen = new Set<string>();
-  for (let page = 1; ; page++) {
-    const query =
-      http.source === 'github'
-        ? new URLSearchParams({
-            type: 'owner',
-            sort: 'full_name',
-            direction: 'asc',
-            per_page: '100',
-            page: String(page),
-          })
-        : new URLSearchParams({
-            filter_type: 'public',
-            role: 'Owner',
-            order_by: 'slug_path',
-            desc: 'false',
-            page_size: '100',
-            page: String(page),
-          });
-    const path = '/users/' + encodeURIComponent(username) + '/repos?' + query;
-    const raw = await http.get(path);
-    const rows =
-      http.source === 'github'
-        ? decode(
-            z.array(
-              z.object({ full_name: z.string(), private: z.boolean(), stargazers_count: count }),
-            ),
-            raw,
-            http.source,
-          ).map((repo) => ({
-            path: repo.full_name,
-            stars: repo.stargazers_count,
-            public: !repo.private,
-          }))
-        : decode(
-            z.array(
-              z.object({ path: z.string(), visibility_level: z.string(), star_count: count }),
-            ),
-            raw,
-            http.source,
-          ).map((repo) => ({
-            path: repo.path,
-            stars: repo.star_count,
-            public: repo.visibility_level === 'Public',
-          }));
-    if (!Array.isArray(raw) || raw.length === 0) break;
-    let added = 0;
-    for (const repo of rows) {
-      if (seen.has(repo.path)) continue;
-      seen.add(repo.path);
-      if (repo.public) result.push({ stars: repo.stars });
-      added++;
-    }
-    if (!added) throw new DataError(http.source + ' repository pagination did not advance');
-  }
-  return result;
-}
 
 async function githubContributions(http: SourceHttp, query: DataRequest<'activity'>, now: Date) {
   http.requireToken();

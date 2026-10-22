@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { defaultProviderConcurrency } from '@cool-profile/data';
 
 export const mediaSchema = z.strictObject({
   format: z.enum(['svg', 'png', 'gif', 'webp']),
@@ -17,6 +18,7 @@ const cacheSchema = z.strictObject({
   'max-entries': z.number().int().positive(),
 });
 const providerSchema = z.strictObject({
+  concurrency: z.number().int().min(1).max(16).optional(),
   'base-url': z.url().refine(
     (value) => {
       try {
@@ -89,7 +91,15 @@ export const runtimeDefaults: Runtime = {
   server: { host: '127.0.0.1', port: 3000 },
   cache: { ttl: 300, 'max-entries': 256 },
   providers: {
-    github: { 'base-url': 'https://api.github.com', 'token-env': 'GITHUB_TOKEN' },
-    cnb: { 'base-url': 'https://api.cnb.cool', 'token-env': 'CNB_TOKEN' },
+    github: {
+      'base-url': 'https://api.github.com',
+      'token-env': 'GITHUB_TOKEN',
+      concurrency: defaultProviderConcurrency,
+    },
+    cnb: {
+      'base-url': 'https://api.cnb.cool',
+      'token-env': 'CNB_TOKEN',
+      concurrency: defaultProviderConcurrency,
+    },
   },
 };
