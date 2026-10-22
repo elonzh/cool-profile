@@ -4,14 +4,38 @@
 
 Turn changing information into images and animations for your profile, README, or website.
 
-The first release will use GitHub and CNB data to generate snake animations, space shooters, 3D activity calendars, and statistics cards. Future data sources may include Bilibili follower counts and Steam profiles.
+Supports GitHub and CNB, with Chinese as the default, English output, and light and dark themes. Statistics cards are available now; snake animations, space shooters, and 3D activity calendars are in development.
 
-Media output will support multiple languages, with Chinese as the default, and a choice of visual themes.
+## Preview
+
+![CNB statistics card](cards/stats/examples/cnb-default.en.svg)
+
+![GitHub dark statistics card](cards/stats/examples/github-dark.en.svg)
 
 ## Usage
 
-The planned `coolp` command will support file generation with `coolp render`, batch generation with `coolp batch`, and an image server with `coolp serve`. The CNB plugin and GitHub Action will run the same command using the same image.
+Requires Node.js 24+ and pnpm. Run these commands once from the repository:
 
-The project is being initialized; the generator has not been released yet. See the [architecture proposal](docs/architecture.md).
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+```
+
+Set `GITHUB_TOKEN` for GitHub or `CNB_TOKEN` for CNB. CNB tokens need `account-profile:r` and `account-engage:r` permissions.
+
+```sh
+pnpm coolp render stats --source cnb --subject elonzh --locale en --output stats.svg
+pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+```
+
+Replace subject with your account. For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发)。
+
+Start the image server:
+
+```sh
+pnpm coolp serve
+```
+
+Open `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh&locale=en` to get an image. Add `theme=dark` to change the theme, or use the `.png` extension for PNG output.
 
 [GitHub](https://github.com/elonzh/cool-profile) · [CNB](https://cnb.cool/elonzh/cool-profile)

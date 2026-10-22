@@ -9,7 +9,7 @@ import { parseConfigurationText } from '../config/parse.js';
 import { isRecord } from '../config/values.js';
 
 export function parseGenerationFields(
-  card: Card,
+  card: Card | undefined,
   entries: Iterable<readonly [string, string]>,
   source: string,
 ): RequestLayer {
@@ -22,13 +22,13 @@ export function parseGenerationFields(
     if (seen.has(name)) throw new ConfigurationError(source + ': duplicate parameter ' + name);
     seen.add(name);
     const label = source + ': ' + name;
-    if (name === 'params') {
+    if (name === 'params' && card) {
       const valueObject = parseConfigurationText(value, label, true);
       if (!isRecord(valueObject)) throw new ConfigurationError(label + ': expected a JSON object');
       aggregate = valueObject;
     } else if (Object.hasOwn(mediaSchema.shape, name)) {
       media[name] = decodeWire(schemaAt(mediaJson, [name]), value, label, mediaJson);
-    } else if (Object.hasOwn(card.params.shape, name)) {
+    } else if (card && Object.hasOwn(card.params.shape, name)) {
       params[name] = decodeWire(
         schemaAt(card.parameterSchema, [name]),
         value,
@@ -42,7 +42,7 @@ export function parseGenerationFields(
       throw new ConfigurationError(source + ': duplicate parameter ' + key);
   }
   params = { ...aggregate, ...params };
-  validatePatch(card.params, params, source + '.params');
+  if (card) validatePatch(card.params, params, source + '.params');
   const patch = parseSchema(cardPatchSchema, { render: media, params }, source);
   return { source, ...patch };
 }

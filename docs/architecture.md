@@ -1,7 +1,7 @@
 ---
 title: Cool Profile 架构与接口方案
 status: implementing
-updated_at: 2026-10-22
+updated_at: 2026-10-23
 ---
 
 ## 定位与范围
@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已具备工程检查、类型化卡片协议、数据能力与 SVG 产物契约、构建时发现、分层配置、来源诊断，以及 CLI/URL/插件的共用参数解析模块。可执行 CLI、HTTP server、数据适配器和实际效果正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本，两份 README 介绍项目、展示效果和指导使用。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats 已提供中英文、明暗主题和 SVG/PNG 输出。其余效果、语言/仓库卡、统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -96,7 +96,9 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 - params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params 及 CLI 控制选项是保留名，不能重复声明。
 - defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
 - validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。
-- LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置，字体与图形工具由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
+- LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置和 text 排版函数，图元由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
+
+defineCard 将 load 和 render 封装为内部 prepare 方法，先取得快照，再返回保留类型信息的绘图函数。应用记录本次使用的快照版本及权限作用域，在绘图与编码之前查询媒体缓存。缓存仅属于应用实例；共享取数任务使用独立超时，某个 HTTP 客户端取消请求不取消其他消费者。
 
 添加一张融合卡片时，在 `cards/profile` 放入上述 package.json，并实现 `src/index.ts`、绘图代码及样张。以下示例使用首期选定的两个来源：
 
@@ -154,14 +156,14 @@ coolp serve [--config <file>] [--host <address>] [--port <port>]
 ```
 
 ```sh
-coolp render snake --source cnb --subject elonzh --format svg --theme dark --locale zh-CN --output dist/snake.svg
+coolp render stats --source cnb --subject elonzh --format svg --theme dark --locale zh-CN --output dist/stats.svg
 ```
 
 ```text
-GET /v1/cards/snake.svg?source=cnb&subject=elonzh&theme=dark&locale=zh-CN
+GET /v1/cards/stats.svg?source=cnb&subject=elonzh&theme=dark&locale=zh-CN
 ```
 
-融合卡片使用自己的参数，不必声明 source 或 subject：
+按上节添加融合卡片包后，可使用自己的参数，不必声明 source 或 subject：
 
 ```sh
 coolp render profile/overview --github-user elonzh --cnb-user elonzh --format svg --locale zh-CN --output dist/overview.svg
@@ -251,20 +253,16 @@ defaults:
   theme: default
 
 cards:
-  snake:
+  stats:
     render:
       theme: dark
     params:
       source: cnb
       subject: elonzh
-  profile/overview:
-    params:
-      github-user: elonzh
-      cnb-user: elonzh
 
 jobs:
-  - card: snake
-    output: cnb-snake.svg
+  - card: stats
+    output: cnb-stats.svg
   - card: stats
     render:
       locale: en
@@ -286,7 +284,7 @@ runtime 和 defaults 使用 `COOLP__<区域>__<字段>`，双下划线分层，�
 export COOLP__RUNTIME__SERVER__PORT=8080
 export COOLP__RUNTIME__LOG_LEVEL=debug
 export COOLP__DEFAULTS__LOCALE=en
-export COOLP__CARDS='{"snake":{"params":{"subject":"another-user"}},"profile/overview":{"params":{"cnb-user":"another-user"}}}'
+export COOLP__CARDS='{"stats":{"params":{"subject":"another-user"}}}'
 ```
 
 COOLP__CARDS 的值与文件的 cards 区域同构，可同时设置多张卡的 render 和 params，也支持含斜杠的 ID。这样无需把 ID 编码成有歧义的环境变量名。数组和对象使用 JSON，标量依据 schema 转换；空字符串保留为空值，不能隐式表示未配置。未知 COOLP__ 字段报错。其他应用或系统环境变量不参与参数合并。
@@ -322,7 +320,7 @@ provider 的 token-env 指定凭证环境变量名，GitHub/CNB 默认分别使�
 
 先按相同来源内的作用域合并，再按来源优先级覆盖。因此环境中的全局 locale 可以覆盖文件中某张卡的 locale，URL 中的 locale 又能覆盖环境值。CLI 与 URL 的最终请求使用同一套函数，不从进程全局状态修改卡片定义。
 
-以上述文件和环境变量为例，执行 `coolp render snake --locale zh-CN --dry-run` 会得到 source=cnb、subject=another-user、theme=dark、locale=zh-CN：账号来自环境的卡片配置，主题来自文件的卡片配置，语言来自本次命令。
+以上述文件和环境变量为例，执行 `coolp render stats --locale zh-CN --dry-run` 会得到 source=cnb、subject=another-user、theme=dark、locale=zh-CN：账号来自环境的卡片配置，主题来自文件的卡片配置，语言来自本次命令。
 
 先确定媒体设置，再用这些设置计算卡片参数 defaults，最后应用各层 params。defaults 函数只确定最低优先级的值，不能覆盖用户参数。对象递归合并，标量与数组整体替换；字段缺省表示沿用低层，null 仅在 schema 明确允许时有效，不作为删除指令。
 
@@ -343,7 +341,9 @@ CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card �
 
 数据按日历、资料、统计、仓库等能力组织，卡片按需组合快照。资源由来源、服务地址、来源内 ID 标识；数据请求缓存键包含能力、资源、查询与权限作用域。快照保留采集时间、刷新建议、缺失值、单位和统计范围。
 
-时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。位图编码初步评估 resvg-js、gifenc、sharp，以中文排版、媒体体积和性能验证确定实现。
+时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。GitHub 日历按 UTC 日期、CNB 按 Asia/Shanghai 日期解析，统计卡的提交、议题和合并请求使用最近 365 天的平台计数；获赞汇总完整分页的公开 Owner 仓库，公开仓库数使用平台资料字段。CNB 活跃分与 GitHub 贡献数保留各自名称与等级语义。HTTP、响应结构或认证失败直接报错，不替换成零值。
+
+Noto Sans SC 可变字体及 OFL 授权文件随应用放在 assets/fonts。Fontkit 根据字体生成文字矢量路径，text 支持字重、测量、对齐和省略；SVG 保留可访问名称，渲染时不依赖系统字体或外部字体服务。PNG 由 resvg-js 使用同一份 SVG 生成。原生编码依赖从 bundle 外加载，应用包声明运行依赖；GIF/WebP 编码随动画效果接入。
 
 server 本地默认监听 127.0.0.1:3000，容器显式使用 host=0.0.0.0。GET/HEAD `/v1/cards/<完整 ID>[.<format>]` 交付媒体，设置 Content-Type 与基于内容的 ETag，支持缓存和条件请求。媒体缓存键包含最终规范化参数、数据版本、权限作用域和渲染版本，不包含 CLI 文件位置。
 
@@ -385,19 +385,23 @@ $:
 
 ## 工程与实施
 
-Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数使用 Zod 4，tsx 执行发现脚本，Vitest 验证行为；构建拟用 tsdown，画廊拟用 Vite 与 TypeScript，依赖随对应实现引入。esbuild 的依赖安装脚本仅在项目 allowBuilds 中启用，用于 tsx 执行 TypeScript，不安装全局工具。
+Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数使用 Zod 4，tsx 执行发现脚本，Vitest 验证行为，tsdown 打包 ESM 可执行文件。画廊拟用 Vite 与 TypeScript。esbuild 的依赖安装脚本仅在项目 allowBuilds 中启用，用于 tsx 执行 TypeScript，不安装全局工具。
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm hooks:install
 pnpm check
 pnpm cards:discover
+pnpm build
+pnpm coolp render stats --source cnb --subject elonzh --output stats.svg
 pnpm sync:remotes
 ```
 
 格式及风格检查交给提交钩子，修复后检查差异、重新暂存再提交。功能验证覆盖注册发现、配置覆盖与类型转换、CLI/URL 请求一致性、数据语义、确定性模拟、文字与图形边界及媒体交付。测试针对行为风险，不为简单配置堆叠实现镜像式断言。
 
-pnpm cards:discover 校验 cards/* 的实际导出并生成 generated/cards.ts。空卡片目录可用于当前基础设施阶段；实际卡片接入后，构建导入同一份生成结果。generated/ 不提交到 Git，CI 检查会重新生成。
+pnpm cards:discover 校验 cards/* 的实际导出并生成 generated/cards.ts，应用构建导入这份注册表。generated/ 不提交到 Git，CI 检查会重新生成。
+
+pnpm build 先发现卡片，再生成 apps/coolp/dist/coolp.mjs；该文件可直接通过 Node 或其 shebang 运行。开发时 pnpm coolp 使用相同入口。完整检查在测试前构建，CLI 集成测试执行真实 bundle，HTTP 测试使用本地 API 服务，不依赖外部令牌；真实样张保存在各卡片包的 examples/。
 
 实施顺序为协议及发现、配置与数据/图形基础、首张卡片的 CLI 和 server、四类效果及多语言样张，随后完成统一镜像、CI 入口、画廊和插件市场。
 
@@ -407,6 +411,8 @@ origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](htt
 
 - [Zod 严格对象、类型推导和校验](https://zod.dev/api)、[JSON Schema 导出](https://zod.dev/json-schema)
 - [YAML 配置解析](https://github.com/eemeli/yaml)
+- [Fontkit](https://github.com/foliojs/fontkit)、[Noto Sans SC](https://github.com/google/fonts/tree/main/ofl/notosanssc)
+- [GitHub 用户 API](https://docs.github.com/en/rest/users/users)、[仓库 API](https://docs.github.com/en/rest/repos/repos)、[CNB Open API](https://docs.cnb.cool/zh/develops/openapi.html)
 - [pnpm workspace](https://pnpm.io/workspaces)、[catalog](https://pnpm.io/catalogs)
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter/config)、[Oxfmt](https://oxc.rs/docs/guide/usage/formatter/config)、[prek](https://prek.j178.dev/local-hooks/)
 - [tsdown](https://tsdown.dev/)、[Vitest](https://vitest.dev/)、[Vite](https://vite.dev/)

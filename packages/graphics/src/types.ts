@@ -7,6 +7,18 @@ export interface MediaOptions {
   seed: number;
 }
 
+export interface TextStyle {
+  size: number;
+  fill: string;
+  weight?: 400 | 600 | 700;
+  maxWidth?: number;
+  anchor?: 'start' | 'middle' | 'end';
+}
+export interface TextRenderer {
+  (value: string, x: number, y: number, style: TextStyle): string;
+  measure(value: string, style: Pick<TextStyle, 'size' | 'weight'>): number;
+}
+
 export interface Graphic {
   width: number;
   height: number;

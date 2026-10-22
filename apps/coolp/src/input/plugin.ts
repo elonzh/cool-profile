@@ -11,11 +11,13 @@ export interface PluginInput {
   config?: string;
   output?: string;
 }
+export interface PluginSettings extends Omit<PluginInput, 'input'> {
+  fields: [string, string][];
+}
 
-export function parsePluginInput(
-  card: Card,
+export function readPluginSettings(
   environment: Readonly<Record<string, string | undefined>>,
-): PluginInput {
+): PluginSettings {
   const fields: [string, string][] = [];
   const controls = new Map<string, string>();
   const names = new Set<string>();
@@ -34,7 +36,6 @@ export function parsePluginInput(
       controls.set(name, value);
     } else fields.push([name, value]);
   }
-  const input = parseGenerationFields(card, fields, 'PLUGIN');
   const runtime = parseSchema(
     runtimePatchSchema,
     {
@@ -44,9 +45,17 @@ export function parsePluginInput(
     'PLUGIN',
   );
   return {
-    input,
+    fields,
     runtime,
     ...(controls.has('config') ? { config: controls.get('config')! } : {}),
     ...(controls.has('output') ? { output: controls.get('output')! } : {}),
   };
+}
+
+export function parsePluginInput(
+  card: Card,
+  environment: Readonly<Record<string, string | undefined>>,
+): PluginInput {
+  const { fields, ...settings } = readPluginSettings(environment);
+  return { ...settings, input: parseGenerationFields(card, fields, 'PLUGIN') };
 }

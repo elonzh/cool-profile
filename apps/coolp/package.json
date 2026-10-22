@@ -2,10 +2,15 @@
   "name": "@cool-profile/coolp",
   "version": "0.0.0",
   "private": true,
+  "bin": {
+    "coolp": "./dist/coolp.mjs"
+  },
   "type": "module",
   "dependencies": {
     "@cool-profile/card-kit": "workspace:*",
+    "@cool-profile/data": "workspace:*",
     "@cool-profile/graphics": "workspace:*",
+    "@resvg/resvg-js": "catalog:",
     "yaml": "catalog:",
     "zod": "catalog:"
   }

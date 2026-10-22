@@ -1,6 +1,11 @@
 import * as z from 'zod';
 import type { DataClient } from '@cool-profile/data/types';
-import type { Graphic, MediaFormat, MediaOptions } from '@cool-profile/graphics/types';
+import type {
+  Graphic,
+  MediaFormat,
+  MediaOptions,
+  TextRenderer,
+} from '@cool-profile/graphics/types';
 import { ConfigurationError, validatePatch } from './schema.js';
 
 export const cardIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
@@ -38,6 +43,7 @@ export interface LoadContext {
 
 export interface RenderContext {
   media: Readonly<MediaOptions>;
+  text: TextRenderer;
 }
 
 export interface CardDefinition<S extends z.ZodObject, Data> {
@@ -62,11 +68,10 @@ export interface Card {
   readonly locales: readonly string[];
   defaults(media: MediaOptions): Record<string, unknown>;
   validate(params: Record<string, unknown>, media: MediaOptions): readonly ValidationIssue[];
-  generate(
+  prepare(
     loadContext: LoadContext,
-    renderContext: RenderContext,
     params: Record<string, unknown>,
-  ): Promise<Graphic>;
+  ): Promise<(context: RenderContext) => Graphic | Promise<Graphic>>;
 }
 
 function nonemptyUnique(values: readonly string[], field: string): void {
@@ -150,10 +155,10 @@ export function defineCard<S extends z.ZodObject, Data>(definition: CardDefiniti
     validate(params, media) {
       return definition.validate?.(definition.params.parse(params), media) ?? [];
     },
-    async generate(loadContext, renderContext, rawParams) {
+    async prepare(loadContext, rawParams) {
       const params = definition.params.parse(rawParams);
       const data = await definition.load(loadContext, params);
-      return definition.render(renderContext, data, params);
+      return (renderContext: RenderContext) => definition.render(renderContext, data, params);
     },
   } satisfies Card);
 }

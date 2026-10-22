@@ -40,15 +40,18 @@ describe('card definitions', () => {
         data: { name: source + ' & profile', url: '', metrics: [] },
       });
     }
-    const graphic = await profileCards[0]!.generate(
+    const draw = await profileCards[0]!.prepare(
       {
         data: { read },
         signal: new AbortController().signal,
         now: new Date('2026-10-22T00:00:00Z'),
       },
-      { media: { format: 'svg', theme: 'default', locale: 'zh-CN', seed: 0 } },
       { 'github-user': 'elonzh', 'cnb-user': 'elonzh' },
     );
+    const graphic = await draw({
+      media: { format: 'svg', theme: 'default', locale: 'zh-CN', seed: 0 },
+      text: Object.assign(() => '', { measure: () => 0 }),
+    });
     expect(read.mock.calls.map(([request]) => request.source)).toEqual(['github', 'cnb']);
     expect(graphic.svg).toContain('github &amp; profile / cnb &amp; profile / zh-CN');
   });

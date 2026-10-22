@@ -22,8 +22,6 @@ export interface Activity {
   timezone: string;
   metric: 'contributions' | 'activity-score';
   days: readonly { date: string; value: number; level: number }[];
-  palette: readonly string[];
-  accent: string;
 }
 
 export interface ProfileStats {
@@ -57,16 +55,18 @@ export interface DataCapabilities {
 export type DataKind = keyof DataCapabilities;
 export type DataRequest<K extends DataKind> = DataCapabilities[K]['query'] & { kind: K };
 
-export interface Snapshot<T> extends Resource {
-  collectedAt: string;
-  version: string;
-  permissionScope: string;
-  data: T;
+export type Immutable<T> = T extends object ? { readonly [K in keyof T]: Immutable<T[K]> } : T;
+
+export interface Snapshot<T> extends Readonly<Resource> {
+  readonly collectedAt: string;
+  readonly version: string;
+  readonly permissionScope: string;
+  readonly data: Immutable<T>;
 }
 
 export interface DataClient {
   read<K extends DataKind>(
     request: DataRequest<K>,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; now?: Date },
   ): Promise<Snapshot<DataCapabilities[K]['data']>>;
 }

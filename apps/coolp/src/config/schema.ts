@@ -17,9 +17,25 @@ const cacheSchema = z.strictObject({
   'max-entries': z.number().int().positive(),
 });
 const providerSchema = z.strictObject({
-  'base-url': z.url().refine((url) => /^https?:\/\//.test(url), {
-    message: 'Expected an HTTP or HTTPS URL',
-  }),
+  'base-url': z.url().refine(
+    (value) => {
+      try {
+        const url = new URL(value);
+        return (
+          ['http:', 'https:'].includes(url.protocol) &&
+          !url.username &&
+          !url.password &&
+          !url.search &&
+          !url.hash
+        );
+      } catch {
+        return false;
+      }
+    },
+    {
+      message: 'Expected an HTTP API base URL without credentials, query or fragment',
+    },
+  ),
   'token-env': z
     .string()
     .regex(/^[A-Za-z_][A-Za-z0-9_]*$/)

@@ -5,6 +5,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./encode": "./src/encode.ts",
     "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "catalog:",
+    "fontkit": "catalog:"
+  },
+  "devDependencies": {
+    "@types/fontkit": "catalog:"
   }
 }

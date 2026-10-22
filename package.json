@@ -11,7 +11,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "cards:discover": "tsx scripts/discover-cards.ts",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm cards:discover",
+    "build": "pnpm cards:discover && tsdown",
+    "coolp": "tsx apps/coolp/src/cli.ts",
+    "check": "pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "hooks:install": "prek install",
     "sync:remotes": "git push origin main && git push github main"
   },
@@ -19,6 +21,7 @@
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
+    "tsdown": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
