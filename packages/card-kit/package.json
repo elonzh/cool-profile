@@ -1,0 +1,14 @@
+{
+  "name": "@cool-profile/card-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@cool-profile/data": "workspace:*",
+    "@cool-profile/graphics": "workspace:*",
+    "zod": "catalog:"
+  }
+}

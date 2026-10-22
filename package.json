@@ -9,7 +9,9 @@
     "format:check": "oxfmt --check",
     "lint": "oxlint --deny-warnings",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck",
+    "test": "vitest run",
+    "cards:discover": "tsx scripts/discover-cards.ts",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm cards:discover",
     "hooks:install": "prek install",
     "sync:remotes": "git push origin main && git push github main"
   },
@@ -17,7 +19,10 @@
     "@types/node": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
   },
   "engines": {
     "node": ">=24"

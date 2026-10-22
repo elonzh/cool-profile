@@ -3,5 +3,13 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["oxlint.config.ts", "oxfmt.config.ts"]
+  "include": [
+    "*.config.ts",
+    "packages/**/*.ts",
+    "scripts/**/*.ts",
+    "test/**/*.ts",
+    "cards/**/*.ts",
+    "apps/**/*.ts"
+  ],
+  "exclude": ["**/dist", "**/node_modules"]
 }

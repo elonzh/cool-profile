@@ -1,6 +1,6 @@
 ---
 title: Cool Profile 架构与接口方案
-status: draft
+status: implementing
 updated_at: 2026-10-22
 ---
 
@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已初始化 pnpm workspace、TypeScript、Oxc、prek 和双平台工程检查。本文集中维护架构、卡片协议、配置、命令和 URL 方案；以下功能尚待实现。README.md 默认中文，README.en.md 提供内容一致的英文版本，两份 README 介绍项目、展示效果和指导使用。
+当前已具备工程检查、类型化卡片协议、数据能力与 SVG 产物契约、参数定义校验、部分配置校验和构建时发现。配置覆盖、数据适配器、CLI/server 和实际效果正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本，两份 README 介绍项目、展示效果和指导使用。
 
 ## 职责与依赖
 
@@ -96,7 +96,7 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 - params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed 及 CLI 控制选项是保留名，不能重复声明。
 - defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
 - validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。
-- LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置、字体与图形工具；没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
+- LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置，字体与图形工具由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
 
 添加一张融合卡片时，在 `cards/profile` 放入上述 package.json，并实现 `src/index.ts`、绘图代码及样张。以下示例使用首期选定的两个来源：
 
@@ -380,16 +380,19 @@ $:
 
 ## 工程与实施
 
-Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数拟用 Zod 4，构建拟用 tsdown，行为验证拟用 Vitest，画廊拟用 Vite 与 TypeScript；依赖随对应实现引入。
+Node.js 24+、TypeScript、pnpm workspace 与 catalog，内部依赖用 workspace 协议。Oxlint、Oxfmt 和 prek 已配置。卡片参数使用 Zod 4，tsx 执行发现脚本，Vitest 验证行为；构建拟用 tsdown，画廊拟用 Vite 与 TypeScript，依赖随对应实现引入。esbuild 的依赖安装脚本仅在项目 allowBuilds 中启用，用于 tsx 执行 TypeScript，不安装全局工具。
 
 ```sh
 pnpm install --frozen-lockfile
 pnpm hooks:install
 pnpm check
+pnpm cards:discover
 pnpm sync:remotes
 ```
 
 格式及风格检查交给提交钩子，修复后检查差异、重新暂存再提交。功能验证覆盖注册发现、配置覆盖与类型转换、CLI/URL 请求一致性、数据语义、确定性模拟、文字与图形边界及媒体交付。测试针对行为风险，不为简单配置堆叠实现镜像式断言。
+
+pnpm cards:discover 校验 cards/* 的实际导出并生成 generated/cards.ts。空卡片目录可用于当前基础设施阶段；实际卡片接入后，构建导入同一份生成结果。generated/ 不提交到 Git，CI 检查会重新生成。
 
 实施顺序为协议及发现、配置与数据/图形基础、首张卡片的 CLI 和 server、四类效果及多语言样张，随后完成统一镜像、CI 入口、画廊和插件市场。
 
