@@ -1,0 +1,22 @@
+name: Action smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./
+        with:
+          card: repo
+          params: '{"source":"github","subject":"Platane/snk"}'
+          format: png
+          theme: dark
+          output: output/repo.png
+      - name: Check generated media
+        run: test -s output/repo.png

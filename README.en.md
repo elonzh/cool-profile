@@ -28,9 +28,15 @@ Supports GitHub and CNB, with Chinese as the default, English output, and multip
 
 ![GitHub dark repository card](cards/stats/examples/repo-github-dark.en.svg)
 
-## Usage
+## CLI
 
-Requires Node.js 24+ and pnpm. Run these commands once from the repository:
+Generate a file with the image:
+
+```sh
+docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest render snake --source cnb --subject elonzh --locale en --output snake.svg
+```
+
+To run from source, use Node.js 24+ and pnpm. Run these commands once from the repository:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -54,10 +60,50 @@ Replace subject with your account, or a full repository path for repo cards. Lan
 
 For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发).
 
-Start the image server:
+## CNB plugin
+
+Set `PROFILE_CNB_TOKEN` in your secret repository's `profile.yml`, then configure the pipeline:
+
+```yaml
+main:
+  push:
+    - imports:
+        - https://cnb.cool/your-org/secrets/-/blob/main/profile.yml
+      stages:
+        - name: Generate profile animation
+          image: docker.cnb.cool/elonzh/cool-profile:latest
+          args: [render]
+          settings:
+            card: snake
+            params: { source: cnb, subject: elonzh }
+            tokens: { cnb: $PROFILE_CNB_TOKEN }
+            theme: dark
+            locale: en
+            output: profile/snake.svg
+```
+
+Use any card ID for `card` and its parameters for `params`. `format`, `theme` and `locale` have the same meaning as their CLI options.
+
+## GitHub Action
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - uses: elonzh/cool-profile@main
+    with:
+      card: snake
+      params: '{"source":"github","subject":"${{ github.repository_owner }}"}'
+      theme: rainbow
+      locale: en
+      output: profile/snake.svg
+```
+
+The action uses the workflow's GitHub token by default. Use `github-token` or `cnb-token` to provide your own.
+
+## Image server
 
 ```sh
-pnpm coolp serve
+docker run --rm -p 3000:3000 -e GITHUB_TOKEN -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest serve --host 0.0.0.0
 ```
 
 Open `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh&locale=en` to get an image. Add `theme=dark` to change the theme, or use the `.png` extension for PNG output.

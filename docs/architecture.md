@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats、languages、repo 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats、languages、repo 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -97,7 +97,7 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 ```
 
 - formats 第一项为默认格式；themes 包含 default，locales 包含 zh-CN，首期卡片同时提供 en。
-- params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params 及 CLI 控制选项是保留名，不能重复声明。
+- params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params、tokens 及 CLI 控制选项是保留名，不能重复声明。
 - defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
 - validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。ValidationContext 提供应用传入的 now；三个日历卡复用数据包的年份与时区规则，未来年份在 CLI、URL 和 dry-run 中都会被拒绝。
 - LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置和 text 排版函数，图元由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
@@ -357,6 +357,8 @@ batch 的 --locale、--theme、--format、--seed 覆盖每项公共媒体设置�
 
 CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card 可来自 PLUGIN_CARD。公共字段映射到媒体、交付或运行设置，其余字段按当前卡片 schema 映射到 params。适配器将环境变量名中的下划线归一为连字符，也接受保留连字符的键；归一后重复的字段会报错。PLUGIN_PARAMS 支持整个 params 的 JSON，同一字段同时由 PLUGIN_PARAMS 和独立 settings 提供时报重复输入错误。GitHub Action inputs 映射为命令参数。此适配层不再定义一套默认值。
 
+插件的 tokens 是 provider 名称到令牌的对象，CNB 转换为 PLUGIN_TOKENS 的 JSON 字符串。完成运行配置合并后，应用将每个值放入对应 provider.token-env 指定的内存环境副本；它覆盖该变量的原值，不修改进程环境，也不进入配置、请求、dry-run 或错误内容。未知 provider、缺少 token-env、空令牌、重复键及非法 JSON 均报错。系统内置 CNB_TOKEN 可直接使用；从密钥仓库导入的令牌通过 settings.tokens 显式引用。
+
 ### 校验与诊断
 
 1. 读取每个配置来源时检查结构、未知卡片 ID、未知字段、键重复、类型及当前可判定的范围。配置片段的对象递归允许缺省字段，只检查已提供的内容，不在本层填默认值或执行跨字段校验；错误即报告，不被更高层覆盖掩盖。
@@ -382,7 +384,7 @@ CLI 参数错误退出码为 2，生成失败为 1；HTTP 参数错误返回 400
 
 ## 镜像与 CI
 
-拟发布镜像 `docker.cnb.cool/elonzh/cool-profile:latest`，包含 coolp、server、编码器与字体：
+镜像 `docker.cnb.cool/elonzh/cool-profile:latest` 包含 coolp、server、编码器与字体。Dockerfile 先构建 bundle，再用 pnpm deploy --prod --legacy 收集生产依赖和应用文件；runtime 不依赖 workspace 或 pnpm：
 
 ```dockerfile
 ENTRYPOINT ["coolp"]
@@ -412,7 +414,11 @@ $:
             output: dist/snake.svg
 ```
 
-根 action.yml、插件元数据和 Dockerfile 负责分发及输入适配。GitHub Docker Action 调用同一镜像的 coolp render。args 追加到 ENTRYPOINT 并替换 CMD；插件和 server 通过子命令运行。CI 生成工作区文件，Git 提交、制品上传和部署由后续流水线步骤负责。仓库流水线镜像使用 latest 等浮动标签，遵循已确定的配置取舍。
+root action.yml 引用同一镜像，entrypoint 指向随应用打包的 action.mjs；它将非空 inputs 逐项作为 coolp render 的命令参数传入，不经过 Shell。github-token 默认使用 github.token，cnb-token 可选，分别放入 GITHUB_TOKEN、CNB_TOKEN；自定义 token-env 可通过 workflow env 设置。空媒体输入沿用应用配置，新增卡片的业务参数统一使用 params JSON。
+
+CNB 插件使用镜像默认 ENTRYPOINT coolp，args 追加子命令 render 或 batch；server 通过 serve 启动。根 plugin-meta.json、README.md、README.en.md 组成插件市场贡献材料。CI 生成工作区文件，Git 提交、制品上传和部署由后续流水线步骤负责。
+
+双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 通过后发布提交 SHA 标签和 latest；发布流水线串行执行，避免旧构建覆盖新镜像。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。
 
 ## 工程与实施
 

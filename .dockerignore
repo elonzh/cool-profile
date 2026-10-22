@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/dist
+generated
+coverage
+.cache
+.env
+.env.*
+**/examples
+docs
+README*

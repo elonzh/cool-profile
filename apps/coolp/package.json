@@ -5,6 +5,11 @@
   "bin": {
     "coolp": "./dist/coolp.mjs"
   },
+  "files": [
+    "dist",
+    "assets",
+    "action.mjs"
+  ],
   "type": "module",
   "dependencies": {
     "@cool-profile/card-kit": "workspace:*",

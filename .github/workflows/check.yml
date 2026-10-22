@@ -20,3 +20,12 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check workspace
         run: pnpm check
+  image:
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build application image
+        run: docker build --label org.opencontainers.image.revision=${{ github.sha }} -t cool-profile:verify .
+      - name: Verify packaged application
+        run: node scripts/verify-image.mjs cool-profile:verify

@@ -2,18 +2,45 @@
   name: workspace-check
   docker:
     image: node:latest
+  services:
+    - docker
   stages:
-    - name: install-pnpm
+    - &install-pnpm
+      name: install-pnpm
       script: |
         npm install --global "$(node -p 'require("./package.json").packageManager')"
-    - name: install-dependencies
+    - &install-dependencies
+      name: install-dependencies
       script: pnpm install --frozen-lockfile
-    - name: check-workspace
+    - &check-workspace
+      name: check-workspace
       script: pnpm check
+    - &build-image
+      name: build-image
+      script: docker build --label org.opencontainers.image.revision=${CNB_COMMIT} -t cool-profile:verify .
+    - &verify-image
+      name: verify-image
+      script: node scripts/verify-image.mjs cool-profile:verify
 
 main:
   push:
-    - *check
+    - <<: *check
+      lock:
+        key: publish-cool-profile
+        wait: true
+        cancel-in-wait: true
+      stages:
+        - *install-pnpm
+        - *install-dependencies
+        - *check-workspace
+        - *build-image
+        - *verify-image
+        - name: publish-image
+          script: |
+            docker tag cool-profile:verify ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+            docker tag cool-profile:verify ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+            docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+            docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
 
 $:
   pull_request:

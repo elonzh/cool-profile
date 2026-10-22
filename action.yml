@@ -1,0 +1,47 @@
+name: Cool Profile
+description: Generate profile cards and animations from GitHub and CNB data
+branding:
+  icon: image
+  color: green
+inputs:
+  card:
+    description: Card ID
+    required: true
+  params:
+    description: Card parameters as a JSON object
+    default: '{}'
+  format:
+    description: Media format
+  theme:
+    description: Card theme
+  locale:
+    description: Media language
+  seed:
+    description: Random seed
+  config:
+    description: Configuration file path
+  output:
+    description: Output file path
+  output-dir:
+    description: Output directory
+  github-token:
+    description: GitHub access token
+    default: ${{ github.token }}
+  cnb-token:
+    description: CNB access token
+runs:
+  using: docker
+  image: docker://docker.cnb.cool/elonzh/cool-profile:latest
+  entrypoint: /opt/cool-profile/action.mjs
+  env:
+    INPUT_CARD: ${{ inputs.card }}
+    INPUT_PARAMS: ${{ inputs.params }}
+    INPUT_FORMAT: ${{ inputs.format }}
+    INPUT_THEME: ${{ inputs.theme }}
+    INPUT_LOCALE: ${{ inputs.locale }}
+    INPUT_SEED: ${{ inputs.seed }}
+    INPUT_CONFIG: ${{ inputs.config }}
+    INPUT_OUTPUT: ${{ inputs.output }}
+    INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+    INPUT_GITHUB_TOKEN: ${{ inputs.github-token }}
+    INPUT_CNB_TOKEN: ${{ inputs.cnb-token }}

@@ -28,9 +28,15 @@
 
 ![GitHub 深色仓库卡](cards/stats/examples/repo-github-dark.zh-CN.svg)
 
-## 使用
+## 命令行
 
-需要 Node.js 24+ 和 pnpm。在仓库目录首次执行：
+使用镜像生成文件：
+
+```sh
+docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest render snake --source cnb --subject elonzh --output snake.svg
+```
+
+从源码运行需要 Node.js 24+ 和 pnpm。在仓库目录首次执行：
 
 ```sh
 pnpm install --frozen-lockfile
@@ -54,10 +60,48 @@ pnpm coolp render repo --source github --subject Platane/snk --theme dark --outp
 
 批量生成使用 `pnpm coolp batch --config coolp.yaml`，配置方式见[配置示例](docs/architecture.md#配置结构与下发)。
 
-启动图片服务：
+## CNB 插件
+
+在密钥仓库的 `profile.yml` 中设置 `PROFILE_CNB_TOKEN`，然后配置流水线：
+
+```yaml
+main:
+  push:
+    - imports:
+        - https://cnb.cool/your-org/secrets/-/blob/main/profile.yml
+      stages:
+        - name: 生成主页动画
+          image: docker.cnb.cool/elonzh/cool-profile:latest
+          args: [render]
+          settings:
+            card: snake
+            params: { source: cnb, subject: elonzh }
+            tokens: { cnb: $PROFILE_CNB_TOKEN }
+            theme: dark
+            output: profile/snake.svg
+```
+
+`card` 可换成任意卡片 ID，`params` 填对应参数。`format`、`theme`、`locale` 与命令行同义。
+
+## GitHub Action
+
+```yaml
+steps:
+  - uses: actions/checkout@v6
+  - uses: elonzh/cool-profile@main
+    with:
+      card: snake
+      params: '{"source":"github","subject":"${{ github.repository_owner }}"}'
+      theme: rainbow
+      output: profile/snake.svg
+```
+
+默认使用工作流的 GitHub 令牌，也可通过 `github-token`、`cnb-token` 提供自己的令牌。
+
+## 图片服务
 
 ```sh
-pnpm coolp serve
+docker run --rm -p 3000:3000 -e GITHUB_TOKEN -e CNB_TOKEN docker.cnb.cool/elonzh/cool-profile:latest serve --host 0.0.0.0
 ```
 
 访问 `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh` 即可获取图片。添加 `theme=dark`、`locale=en` 切换主题和语言，路径后缀可改为 `.png`。

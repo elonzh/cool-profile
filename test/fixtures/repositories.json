@@ -1,0 +1,26 @@
+{
+  "github": {
+    "full_name": "author/project",
+    "private": false,
+    "stargazers_count": 23,
+    "language": "TypeScript",
+    "fork": false,
+    "description": "开源主页卡片 🟩 · Profile cards",
+    "html_url": "https://github.com/author/project",
+    "forks_count": 4,
+    "open_issues_count": 5,
+    "license": { "spdx_id": "MIT", "name": "MIT License" }
+  },
+  "cnb": {
+    "path": "author/group/project",
+    "visibility_level": "Public",
+    "star_count": 23,
+    "languages": { "language": "TypeScript", "color": "#3178c6" },
+    "description": "开源主页卡片 🟩 · Profile cards",
+    "web_url": "https://cnb.cool/author/group/project",
+    "fork_count": 4,
+    "open_issue_count": 2,
+    "open_pull_request_count": 3,
+    "license": "MIT"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "cool-profile",
+  "description": "将 GitHub、CNB 动态信息生成为个人主页图片与动画，提供贪吃蛇、太空射击、3D 日历和统计卡片",
+  "tags": ["profile", "github", "cnb", "svg", "png", "gif", "webp"],
+  "images": "docker.cnb.cool/elonzh/cool-profile",
+  "source": "https://cnb.cool/elonzh/cool-profile",
+  "bugs": "https://cnb.cool/elonzh/cool-profile/-/issues",
+  "locales": {
+    "en": {
+      "name": "cool-profile",
+      "description": "Generate profile cards and animations from GitHub and CNB: snake, space shooter, 3D calendars and statistics",
+      "readme": "README.en.md"
+    }
+  }
+}

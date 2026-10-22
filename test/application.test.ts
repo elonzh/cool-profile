@@ -454,6 +454,62 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(shooter.stdout.subarray(8, 12).toString()).toBe('WEBP');
 }, 15000);
 
+it('maps plugin tokens to configured provider environments without exposing their values in dry-run', async () => {
+  const token = 'fixture-private-token';
+  const port = await listen(
+    createServer((request, response) => {
+      if (request.headers.authorization !== 'Bearer ' + token) {
+        response.writeHead(401);
+        response.end();
+        return;
+      }
+      response.setHeader('Content-Type', 'application/json');
+      response.end(JSON.stringify(fixtureApi(new URL(request.url!, 'http://fixture'))));
+    }),
+  );
+  const config = resolve(await folder(), 'coolp.json');
+  await writeFile(
+    config,
+    JSON.stringify({
+      runtime: {
+        providers: {
+          cnb: { 'base-url': 'http://127.0.0.1:' + port + '/cnb', 'token-env': 'CUSTOM_CNB_TOKEN' },
+        },
+      },
+    }),
+  );
+  const environment = {
+    ...Object.fromEntries(
+      Object.entries(process.env).filter(
+        ([key]) => !key.startsWith('PLUGIN_') && !key.startsWith('COOLP_'),
+      ),
+    ),
+    CUSTOM_CNB_TOKEN: '',
+    CNB_TOKEN: 'wrong-default-token',
+    PLUGIN_CONFIG: config,
+    PLUGIN_CARD: 'repo',
+    PLUGIN_PARAMS: '{"source":"cnb","subject":"author/group/project"}',
+    PLUGIN_TOKENS: JSON.stringify({ cnb: token }),
+    PLUGIN_FORMAT: 'png',
+    PLUGIN_OUTPUT: '-',
+  };
+  const rendered = await cli(['render'], environment);
+  expect(rendered.code, rendered.stderr).toBe(0);
+  expect(rendered.stdout.subarray(0, 4)).toEqual(Buffer.from([137, 80, 78, 71]));
+  const preview = await cli(['render', '--dry-run'], environment);
+  expect(preview.code, preview.stderr).toBe(0);
+  expect(preview.stdout.toString()).toContain('CUSTOM_CNB_TOKEN');
+  expect(preview.stdout.toString()).not.toContain(token);
+  expect(preview.stdout.toString()).not.toContain('wrong-default-token');
+  const invalid = await cli(['render', '--dry-run'], {
+    ...environment,
+    PLUGIN_TOKENS: '{"cnb":"secret-one","cnb":"secret-two"}',
+  });
+  expect(invalid.code).toBe(2);
+  expect(invalid.stderr).toContain('PLUGIN_TOKENS');
+  expect(invalid.stderr).not.toMatch(/secret-one|secret-two/);
+});
+
 it('limits concurrent drawing and encoding and releases a failed job for the next request', async () => {
   for (const concurrency of [1, 2]) {
     let active = 0;

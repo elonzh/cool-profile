@@ -1,3 +1,4 @@
+import repositories from './repositories.json' with { type: 'json' };
 import { dates } from '../../packages/data/src/window.js';
 
 export const fixedNow = new Date('2026-10-22T12:00:00Z');
@@ -84,31 +85,7 @@ export function fixtureApi(url: URL, body?: string, revision = 1): unknown {
   if (path.match(/^\/repos\/author\/repo-\d-\d\/languages$/))
     return path.includes('repo-1-') ? { TypeScript: 300, CSS: 100 } : { Python: 100, CSS: 100 };
   if (path === '/repos/author/project' || path === '/author/group/project')
-    return cnb
-      ? {
-          path: 'author/group/project',
-          visibility_level: 'Public',
-          star_count: 23,
-          languages: { language: 'TypeScript', color: '#3178c6' },
-          description: '开源主页卡片 · Profile cards',
-          web_url: 'https://cnb.cool/author/group/project',
-          fork_count: 4,
-          open_issue_count: 2,
-          open_pull_request_count: 3,
-          license: 'MIT',
-        }
-      : {
-          full_name: 'author/project',
-          private: false,
-          stargazers_count: 23,
-          language: 'TypeScript',
-          fork: false,
-          description: '开源主页卡片 · Profile cards',
-          html_url: 'https://github.com/author/project',
-          forks_count: 4,
-          open_issues_count: 5,
-          license: { spdx_id: 'MIT', name: 'MIT License' },
-        };
+    return cnb ? repositories.cnb : repositories.github;
   if (path === '/users/author/calendar')
     return {
       '20251022': { score: 1000, commit_count: 1000, pr_count: 1000, issues_count: 1000 },

@@ -14,6 +14,7 @@ const marker = Symbol.for('coolp.card');
 const reserved = new Set([
   'card',
   'params',
+  'tokens',
   'format',
   'theme',
   'locale',

@@ -20,7 +20,7 @@ import type { RuntimePatch } from './config/index.js';
 import { decodeWire, schemaAt } from './config/wire.js';
 import { parseOptions, stringFields } from './input/options.js';
 import { parseGenerationFields } from './input/fields.js';
-import { readPluginSettings } from './input/plugin.js';
+import { readPluginSettings, pluginEnvironment } from './input/plugin.js';
 import { createRenderer, version } from './render.js';
 import { createImageServer } from './server.js';
 
@@ -127,6 +127,7 @@ async function main(
         { source: 'CLI', value: runtime },
       ],
     });
+    const credentials = pluginEnvironment(settings, configuration.runtime.providers, environment);
     if (command === 'serve') {
       if (
         dryRun ||
@@ -139,7 +140,7 @@ async function main(
           'serve accepts runtime options; configure card defaults in a file or COOLP__CARDS',
         );
       }
-      const renderer = await createRenderer({ registry, configuration, environment });
+      const renderer = await createRenderer({ registry, configuration, environment: credentials });
       const server = createImageServer({ registry, configuration, renderer });
       server.listen(configuration.runtime.server.port, configuration.runtime.server.host);
       await once(server, 'listening');
@@ -211,7 +212,7 @@ async function main(
       );
       return 0;
     }
-    const renderer = await createRenderer({ registry, configuration, environment });
+    const renderer = await createRenderer({ registry, configuration, environment: credentials });
     for (const job of jobs) {
       const media = await renderer.render(job.request);
       if (job.output === '-') await output(process.stdout, media.bytes);

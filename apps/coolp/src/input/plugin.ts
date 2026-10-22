@@ -1,4 +1,7 @@
 import { ConfigurationError, parseSchema } from '@cool-profile/card-kit';
+import * as z from 'zod';
+import type { ProviderOptions } from '@cool-profile/data';
+import { parseConfigurationText } from '../config/parse.js';
 import type { Card } from '@cool-profile/card-kit';
 import { runtimePatchSchema } from '../config/schema.js';
 import type { RuntimePatch } from '../config/schema.js';
@@ -10,6 +13,7 @@ export interface PluginInput {
   runtime: RuntimePatch;
   config?: string;
   output?: string;
+  tokens?: Readonly<Record<string, string>>;
 }
 export interface PluginSettings extends Omit<PluginInput, 'input'> {
   fields: [string, string][];
@@ -31,7 +35,7 @@ export function readPluginSettings(
     if (names.has(name)) throw new ConfigurationError('Duplicate plugin parameter: ' + name);
     names.add(name);
     if (name === 'card') continue;
-    if (['config', 'output', 'output-dir', 'log-level'].includes(name)) {
+    if (['config', 'output', 'output-dir', 'log-level', 'tokens'].includes(name)) {
       if (!value) throw new ConfigurationError(variable + ': cannot be empty');
       controls.set(name, value);
     } else fields.push([name, value]);
@@ -49,7 +53,33 @@ export function readPluginSettings(
     runtime,
     ...(controls.has('config') ? { config: controls.get('config')! } : {}),
     ...(controls.has('output') ? { output: controls.get('output')! } : {}),
+    ...(controls.has('tokens')
+      ? {
+          tokens: parseSchema(
+            z.record(z.string().regex(/^[a-z][a-z0-9-]*$/), z.string().min(1)),
+            parseConfigurationText(controls.get('tokens')!, 'PLUGIN_TOKENS', true),
+            'PLUGIN_TOKENS',
+          ),
+        }
+      : {}),
   };
+}
+
+export function pluginEnvironment(
+  settings: PluginSettings,
+  providers: Readonly<Record<string, ProviderOptions>>,
+  environment: Readonly<Record<string, string | undefined>>,
+): Readonly<Record<string, string | undefined>> {
+  const result = { ...environment };
+  for (const [source, token] of Object.entries(settings.tokens ?? {})) {
+    const variable = providers[source]?.['token-env'];
+    if (!variable)
+      throw new ConfigurationError(
+        'PLUGIN_TOKENS: provider ' + source + ' needs a configured token-env',
+      );
+    result[variable] = token;
+  }
+  return result;
 }
 
 export function parsePluginInput(
