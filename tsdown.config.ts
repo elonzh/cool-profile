@@ -8,6 +8,6 @@ export default defineConfig({
   target: 'node24',
   dts: false,
   shims: true,
-  deps: { alwaysBundle: [/.*/], neverBundle: ['@resvg/resvg-js'] },
+  deps: { alwaysBundle: [/.*/], neverBundle: ['@resvg/resvg-js', 'sharp'] },
   outputOptions: { entryFileNames: '[name].mjs' },
 });

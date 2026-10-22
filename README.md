@@ -4,9 +4,13 @@
 
 把动态信息变成图片与动画，嵌入个人主页、README 和网站。
 
-支持 GitHub 与 CNB，默认中文，可选英文和明暗主题。当前提供统计卡片；贪吃蛇、太空射击和 3D 活跃日历开发中。
+支持 GitHub 与 CNB，默认中文，可选英文和多种主题。当前提供统计卡片与贪吃蛇动画；太空射击和 3D 活跃日历开发中。
 
 ## 效果
+
+![CNB 贪吃蛇](cards/snake/examples/cnb-default.zh-CN.svg)
+
+![GitHub 彩虹贪吃蛇](cards/snake/examples/github-rainbow.zh-CN.svg)
 
 ![CNB 中文统计卡](cards/stats/examples/cnb-default.zh-CN.svg)
 
@@ -24,6 +28,8 @@ pnpm build
 GitHub 使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`；CNB 令牌需要 `account-profile:r`、`account-engage:r` 权限。
 
 ```sh
+pnpm coolp render snake --source cnb --subject elonzh --output snake.svg
+pnpm coolp render snake --source github --subject elonzh --format gif --theme rainbow --output snake.gif
 pnpm coolp render stats --source cnb --subject elonzh --output stats.svg
 pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
 ```

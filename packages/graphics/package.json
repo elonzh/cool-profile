@@ -9,8 +9,10 @@
     "./types": "./src/types.ts"
   },
   "dependencies": {
+    "@cool-profile/data": "workspace:*",
     "@resvg/resvg-js": "catalog:",
-    "fontkit": "catalog:"
+    "fontkit": "catalog:",
+    "sharp": "catalog:"
   },
   "devDependencies": {
     "@types/fontkit": "catalog:"

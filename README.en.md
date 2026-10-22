@@ -4,9 +4,13 @@
 
 Turn changing information into images and animations for your profile, README, or website.
 
-Supports GitHub and CNB, with Chinese as the default, English output, and light and dark themes. Statistics cards are available now; snake animations, space shooters, and 3D activity calendars are in development.
+Supports GitHub and CNB, with Chinese as the default, English output, and multiple themes. Statistics cards and snake animations are available now; space shooters and 3D activity calendars are in development.
 
 ## Preview
+
+![CNB activity snake](cards/snake/examples/cnb-default.en.svg)
+
+![GitHub rainbow snake](cards/snake/examples/github-rainbow.en.svg)
 
 ![CNB statistics card](cards/stats/examples/cnb-default.en.svg)
 
@@ -24,11 +28,13 @@ pnpm build
 Set `GITHUB_TOKEN` for GitHub or `CNB_TOKEN` for CNB. CNB tokens need `account-profile:r` and `account-engage:r` permissions.
 
 ```sh
+pnpm coolp render snake --source cnb --subject elonzh --locale en --output snake.svg
+pnpm coolp render snake --source github --subject elonzh --format gif --theme rainbow --locale en --output snake.gif
 pnpm coolp render stats --source cnb --subject elonzh --locale en --output stats.svg
 pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
 ```
 
-Replace subject with your account. For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发)。
+Replace subject with your account. For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration example](docs/architecture.md#配置结构与下发).
 
 Start the image server:
 

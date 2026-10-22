@@ -44,6 +44,7 @@ const providerSchema = z.strictObject({
 const runtimeFields = {
   'log-level': z.enum(['debug', 'info', 'warn', 'error', 'silent']),
   'output-dir': z.string().min(1),
+  'render-concurrency': z.number().int().min(1).max(8),
 };
 export const runtimeSchema = z.strictObject({
   ...runtimeFields,
@@ -54,6 +55,7 @@ export const runtimeSchema = z.strictObject({
 export const runtimePatchSchema = z.strictObject({
   'log-level': runtimeFields['log-level'].optional(),
   'output-dir': runtimeFields['output-dir'].optional(),
+  'render-concurrency': runtimeFields['render-concurrency'].optional(),
   server: serverSchema.partial().optional(),
   cache: cacheSchema.partial().optional(),
   providers: z.record(z.string().min(1), providerSchema.partial()).optional(),
@@ -83,6 +85,7 @@ export type ConfigDocument = z.output<typeof documentSchema>;
 export const runtimeDefaults: Runtime = {
   'log-level': 'info',
   'output-dir': 'dist',
+  'render-concurrency': 1,
   server: { host: '127.0.0.1', port: 3000 },
   cache: { ttl: 300, 'max-entries': 256 },
   providers: {

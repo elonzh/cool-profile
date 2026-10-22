@@ -18,6 +18,22 @@ export interface Renderer {
   render(request: ResolvedRequest, signal?: AbortSignal): Promise<RenderedMedia>;
 }
 
+function renderQueue(concurrency: number) {
+  let running = 0;
+  const waiting: (() => void)[] = [];
+  return async <T>(work: () => Promise<T>): Promise<T> => {
+    if (running >= concurrency) await new Promise<void>((resolve) => waiting.push(resolve));
+    else running++;
+    try {
+      return await work();
+    } finally {
+      const next = waiting.shift();
+      if (next) next();
+      else running--;
+    }
+  };
+}
+
 export async function createRenderer(options: {
   registry: ReadonlyMap<string, Card>;
   configuration: Configuration;
@@ -40,6 +56,7 @@ export async function createRenderer(options: {
     configuration.runtime.cache.ttl * 1000,
     configuration.runtime.cache['max-entries'],
   );
+  const encode = renderQueue(configuration.runtime['render-concurrency']);
   return {
     async render(request, signal) {
       signal?.throwIfAborted();
@@ -75,14 +92,16 @@ export async function createRenderer(options: {
         revisions.sort(),
       ]);
       return waitFor(
-        mediaCache.get(key, async () => {
-          const graphic = await draw({ media: request.media, text });
-          const media = await encodeGraphic(graphic, request.media.format);
-          return {
-            ...media,
-            etag: '"' + createHash('sha256').update(media.bytes).digest('hex') + '"',
-          };
-        }),
+        mediaCache.get(key, () =>
+          encode(async () => {
+            const graphic = await draw({ media: request.media, text });
+            const media = await encodeGraphic(graphic, request.media.format);
+            return {
+              ...media,
+              etag: '"' + createHash('sha256').update(media.bytes).digest('hex') + '"',
+            };
+          }),
+        ),
         signal,
       );
     },

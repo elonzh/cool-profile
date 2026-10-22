@@ -6,7 +6,10 @@ import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { createCardRegistry } from '../packages/card-kit/src/index.js';
+import { createCardRegistry, defineCard } from '../packages/card-kit/src/index.js';
+import * as z from 'zod';
+import { setTimeout as delay } from 'node:timers/promises';
+import { svgDocument } from '../packages/graphics/src/index.js';
 import { cards } from '../cards/stats/src/index.js';
 import { loadConfiguration, resolveCardRequest } from '../apps/coolp/src/config/index.js';
 import { createRenderer } from '../apps/coolp/src/render.js';
@@ -234,3 +237,48 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   const invalid = await cli(['render', 'stats', '--subject', 'author'], environment);
   expect(invalid.code).toBe(2);
 }, 15000);
+
+it('limits concurrent drawing and encoding and releases a failed job for the next request', async () => {
+  for (const concurrency of [1, 2]) {
+    let active = 0;
+    let maximum = 0;
+    let fail = true;
+    const entry = defineCard({
+      id: 'queue-test',
+      params: z.strictObject({ index: z.number().int() }),
+      formats: ['svg'],
+      themes: ['default'],
+      locales: ['zh-CN', 'en'],
+      async load() {
+        return undefined;
+      },
+      async render(_ctx, _data, params) {
+        active++;
+        maximum = Math.max(maximum, active);
+        try {
+          await delay(5);
+          if (fail && params.index === 0) throw new Error('Drawing failed');
+          return svgDocument(10, 10, '<rect width="10" height="10"/>');
+        } finally {
+          active--;
+        }
+      },
+    });
+    const entries = createCardRegistry([entry]);
+    const configuration = await loadConfiguration(entries, {
+      cwd: await folder(),
+      environment: { COOLP__RUNTIME__RENDER_CONCURRENCY: String(concurrency) },
+    });
+    const renderer = await createRenderer({ registry: entries, configuration, environment: {} });
+    const requests = [0, 1, 2].map((index) =>
+      resolveCardRequest(configuration, entries, 'queue-test', {
+        inputs: [{ source: 'test', params: { index } }],
+      }),
+    );
+    const results = await Promise.allSettled(requests.map((request) => renderer.render(request)));
+    expect(results.map((result) => result.status)).toEqual(['rejected', 'fulfilled', 'fulfilled']);
+    expect(maximum).toBe(concurrency);
+    fail = false;
+    expect((await renderer.render(requests[0]!)).mime).toBe('image/svg+xml');
+  }
+});

@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats 已提供中英文、明暗主题和 SVG/PNG 输出。其余效果、语言/仓库卡、统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。太空射击、3D、语言/仓库卡、统一镜像、CI 分发入口与画廊正在按本文实现。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -215,6 +215,8 @@ CLI 省略 format、URL 省略扩展名时采用同一默认格式。URL 在最�
 
 日历卡缺省读取最近 365 天，year 指定来源时区下的日历年份。累计指标保留原始统计范围。太空射击 strategy 支持 column、row、random，默认 random；fps 默认 40。3D 的 animate 在 SVG 下默认 true、PNG 下默认 false。
 
+snake 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。
+
 图形包提供基础图元、时间轴和编码，各卡片维护自己的布局、模拟及文案。CNB 默认活跃色阶与徽章绿、GitHub 原生色阶，以及季节、夜景、彩虹、积木和游戏主题随效果实现。字体随镜像分发，每类效果以真实数据验收中英文与多主题样张。
 
 ## 配置结构与下发
@@ -240,6 +242,7 @@ runtime:
     port: 3000
   log-level: info
   output-dir: dist
+  render-concurrency: 1
   cache:
     ttl: 300
   providers:
@@ -293,6 +296,8 @@ COOLP__CARDS 的值与文件的 cards 区域同构，可同时设置多张卡的
 
 provider 的 token-env 指定凭证环境变量名，GitHub/CNB 默认分别使用 GITHUB_TOKEN、CNB_TOKEN；使用数据源时按适配器的认证要求解析，未使用的来源不强制提供凭证。不执行通用字符串插值。凭证值不属于请求参数，错误和配置预览均脱敏。
 
+runtime.render-concurrency 控制同一应用内同时绘图、编码的数量，默认 1，允许 1..8，也可用 COOLP__RUNTIME__RENDER_CONCURRENCY 设置。数据读取仍可并行；相同媒体请求先去重再排队，命中缓存时不占编码名额。此配置属于部署资源设置，图片 URL 不能覆盖。
+
 ### 覆盖顺序
 
 运行配置按以下顺序覆盖，右侧优先：
@@ -343,7 +348,7 @@ CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card �
 
 时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。GitHub 日历按 UTC 日期、CNB 按 Asia/Shanghai 日期解析，统计卡的提交、议题和合并请求使用最近 365 天的平台计数；获赞汇总完整分页的公开 Owner 仓库，公开仓库数使用平台资料字段。CNB 活跃分与 GitHub 贡献数保留各自名称与等级语义。HTTP、响应结构或认证失败直接报错，不替换成零值。
 
-Noto Sans SC 可变字体及 OFL 授权文件随应用放在 assets/fonts。Fontkit 根据字体生成文字矢量路径，text 支持字重、测量、对齐和省略；SVG 保留可访问名称，渲染时不依赖系统字体或外部字体服务。PNG 由 resvg-js 使用同一份 SVG 生成。原生编码依赖从 bundle 外加载，应用包声明运行依赖；GIF/WebP 编码随动画效果接入。
+Noto Sans SC 可变字体及 OFL 授权文件随应用放在 assets/fonts。Fontkit 根据字体生成文字矢量路径，text 支持字重、测量、对齐和省略；SVG 保留可访问名称，渲染时不依赖系统字体或外部字体服务。PNG 由 resvg-js 使用同一份 SVG 生成。GIF/WebP 逐帧绘制并压缩为 PNG，再由 sharp 连接为动画，保留总时长和无限循环；GIF 按累计时间舍入到百分之一秒，避免 40 fps 的帧间隔取整后改变速度。原生编码依赖从 bundle 外加载，应用包声明运行依赖。
 
 server 本地默认监听 127.0.0.1:3000，容器显式使用 host=0.0.0.0。GET/HEAD `/v1/cards/<完整 ID>[.<format>]` 交付媒体，设置 Content-Type 与基于内容的 ETag，支持缓存和条件请求。媒体缓存键包含最终规范化参数、数据版本、权限作用域和渲染版本，不包含 CLI 文件位置。
 
@@ -416,6 +421,6 @@ origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](htt
 - [pnpm workspace](https://pnpm.io/workspaces)、[catalog](https://pnpm.io/catalogs)
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter/config)、[Oxfmt](https://oxc.rs/docs/guide/usage/formatter/config)、[prek](https://prek.j178.dev/local-hooks/)
 - [tsdown](https://tsdown.dev/)、[Vitest](https://vitest.dev/)、[Vite](https://vite.dev/)
-- [resvg-js](https://github.com/thx/resvg-js)、[gifenc](https://github.com/mattdesl/gifenc)、[sharp](https://sharp.pixelplumbing.com/)
+- [resvg-js](https://github.com/thx/resvg-js)、[sharp](https://sharp.pixelplumbing.com/)
 - [CNB 插件 settings](https://docs.cnb.cool/zh/build/create-plugin.html)、[Job args](https://docs.cnb.cool/zh/build/grammar.html#job-args)
 - [GitHub Docker Action args](https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#runsargs)、[Docker ENTRYPOINT 与 CMD](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact)
