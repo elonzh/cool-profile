@@ -1,0 +1,22 @@
+name: Workspace check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    container: node:latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install pnpm
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')"
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Check workspace
+        run: pnpm check

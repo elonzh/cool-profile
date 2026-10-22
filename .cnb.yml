@@ -1,0 +1,20 @@
+.check: &check
+  name: workspace-check
+  docker:
+    image: node:latest
+  stages:
+    - name: install-pnpm
+      script: |
+        npm install --global "$(node -p 'require("./package.json").packageManager')"
+    - name: install-dependencies
+      script: pnpm install --frozen-lockfile
+    - name: check-workspace
+      script: pnpm check
+
+main:
+  push:
+    - *check
+
+$:
+  pull_request:
+    - *check

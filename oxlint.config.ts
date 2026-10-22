@@ -1,0 +1,9 @@
+import { defineConfig } from 'oxlint';
+
+export default defineConfig({
+  categories: {
+    correctness: 'error',
+  },
+  plugins: ['typescript', 'unicorn', 'oxc'],
+  ignorePatterns: ['**/dist/**', '**/coverage/**', '**/generated/**'],
+});
