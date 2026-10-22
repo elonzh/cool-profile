@@ -1,19 +1,23 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as z from 'zod';
-import { createCardRegistry, defineCard, validatePatch } from '../packages/card-kit/src/index.js';
+import {
+  createCardRegistry,
+  defineCard,
+  bindCard,
+  validatePatch,
+} from '../packages/card-kit/src/index.js';
 import { svgDocument } from '../packages/graphics/src/index.js';
 import type { CardDefinition } from '../packages/card-kit/src/index.js';
 import type { DataClient } from '../packages/data/src/types.js';
-import { cards as profileCards } from './fixtures/profile-card.js';
+import profileCard from './fixtures/profile-card.js';
 
 const params = z.strictObject({
   subject: z.string().min(1),
   settings: z.strictObject({ count: z.number().int().positive(), active: z.boolean() }),
 });
 
-function definition(id = 'profile/overview'): CardDefinition<typeof params, string> {
+function definition(): CardDefinition<typeof params, string> {
   return {
-    id,
     params,
     formats: ['svg', 'png'],
     themes: ['default', 'dark'],
@@ -40,7 +44,7 @@ describe('card definitions', () => {
         data: { name: source + ' & profile', url: '', metrics: [] },
       });
     }
-    const draw = await profileCards[0]!.prepare(
+    const draw = await profileCard.prepare(
       {
         data: { read },
         signal: new AbortController().signal,
@@ -58,7 +62,8 @@ describe('card definitions', () => {
 
   it('accepts source-independent namespaced IDs and preserves parameter metadata', () => {
     const card = defineCard(definition());
-    expect(card.id).toBe('profile/overview');
+    expect(card).not.toHaveProperty('id');
+    expect(bindCard('profile/overview', card).id).toBe('profile/overview');
     expect(card.parameterSchema.properties).toHaveProperty('subject');
     expect(card.formats[0]).toBe('svg');
   });
@@ -66,20 +71,29 @@ describe('card definitions', () => {
   it.each(['../snake', 'snake.svg', 'bilibili//card', '/snake', 'snake/'])(
     'rejects ambiguous or invalid card ID %s',
     (id) => {
-      expect(() => defineCard(definition(id))).toThrow('Invalid card ID');
+      expect(() => bindCard(id, defineCard(definition()))).toThrow('Invalid card ID');
     },
   );
 
+  it('rejects author-defined IDs and already bound modules', () => {
+    const authored = { ...definition(), id: 'arbitrary' };
+    expect(() => defineCard(authored)).toThrow('omit id');
+    const card = bindCard('profile/overview', defineCard(definition()));
+    expect(() => bindCard('another/id', card)).toThrow('unbound');
+  });
+
   it('rejects duplicate IDs rather than replacing a card', () => {
-    expect(() => createCardRegistry([defineCard(definition()), defineCard(definition())])).toThrow(
-      'Duplicate card ID',
-    );
+    expect(() =>
+      createCardRegistry([
+        bindCard('profile/overview', defineCard(definition())),
+        bindCard('profile/overview', defineCard(definition())),
+      ]),
+    ).toThrow('Duplicate card ID');
   });
 
   it('rejects reserved option names and implicit input mutation', () => {
     const base = definition();
     const original = {
-      id: base.id,
       formats: base.formats,
       themes: base.themes,
       locales: base.locales,

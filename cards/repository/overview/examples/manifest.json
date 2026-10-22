@@ -1,0 +1,22 @@
+{
+  "name": {
+    "zh-CN": "仓库卡片",
+    "en": "Repository"
+  },
+  "cases": [
+    {
+      "pattern": "cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh/hermes-npc"
+      }
+    },
+    {
+      "pattern": "github-*",
+      "params": {
+        "source": "github",
+        "subject": "Platane/snk"
+      }
+    }
+  ]
+}

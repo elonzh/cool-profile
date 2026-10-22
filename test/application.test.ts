@@ -6,13 +6,11 @@ import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
-import { createCardRegistry, defineCard } from '../packages/card-kit/src/index.js';
+import { createCardRegistry, defineCard, bindCard } from '../packages/card-kit/src/index.js';
 import * as z from 'zod';
 import { setTimeout as delay } from 'node:timers/promises';
 import { svgDocument } from '../packages/graphics/src/index.js';
-import { cards } from '../cards/stats/src/index.js';
-import { cards as cityCards } from '../cards/contrib-3d/src/index.js';
-import { cards as shooterCards } from '../cards/space-shooter/src/index.js';
+import { cards } from '../generated/cards.js';
 import { loadConfiguration, resolveCardRequest } from '../apps/coolp/src/config/index.js';
 import { createRenderer } from '../apps/coolp/src/render.js';
 import { createImageServer } from '../apps/coolp/src/server.js';
@@ -24,7 +22,7 @@ import {
   fixtureFetch,
 } from './fixtures/upstream.js';
 
-const registry = createCardRegistry([...cards, ...cityCards, ...shooterCards]);
+const registry = createCardRegistry(cards);
 const servers: Server[] = [];
 const folders: string[] = [];
 afterEach(async () => {
@@ -67,7 +65,7 @@ it('delivers the same outlined Chinese SVG as file generation with HEAD and cond
     fetch: fixtureFetch(),
     now: () => fixedNow,
   });
-  const request = resolveCardRequest(configuration, registry, 'stats', {
+  const request = resolveCardRequest(configuration, registry, 'profile/stats', {
     inputs: [{ source: 'CLI', params: { source: 'cnb', subject: 'author' } }],
   });
   const file = await renderer.render(request);
@@ -75,7 +73,7 @@ it('delivers the same outlined Chinese SVG as file generation with HEAD and cond
   expect(file.bytes.toString()).toContain('测试用户');
   expect(file.bytes.toString()).not.toContain('<text');
   const port = await listen(createImageServer({ registry, configuration, renderer }));
-  const url = 'http://127.0.0.1:' + port + '/v1/cards/stats.svg?source=cnb&subject=author';
+  const url = 'http://127.0.0.1:' + port + '/v1/cards/profile/stats.svg?source=cnb&subject=author';
   const image = await fetch(url);
   expect(Buffer.from(await image.arrayBuffer())).toEqual(file.bytes);
   expect(image.headers.get('etag')).toBe(file.etag);
@@ -144,7 +142,7 @@ it('changes the ETag when live data changes and reports upstream failures as JSO
     fetch: fixtureFetch(() => revision),
     now: () => fixedNow,
   });
-  const request = resolveCardRequest(configuration, registry, 'stats', {
+  const request = resolveCardRequest(configuration, registry, 'profile/stats', {
     inputs: [{ source: 'test', params: { source: 'github', subject: 'author' } }],
   });
   const first = await renderer.render(request);
@@ -159,7 +157,7 @@ it('changes the ETag when live data changes and reports upstream failures as JSO
   });
   const port = await listen(createImageServer({ registry, configuration, renderer: failed }));
   const response = await fetch(
-    'http://127.0.0.1:' + port + '/v1/cards/stats?source=github&subject=author',
+    'http://127.0.0.1:' + port + '/v1/cards/profile/stats?source=github&subject=author',
   );
   expect(response.status).toBe(502);
   expect(await response.text()).not.toContain('private upstream content');
@@ -176,9 +174,9 @@ it('serves city and shooter formats and rejects future calendar years as request
   });
   const port = await listen(createImageServer({ registry, configuration, renderer }));
   const base = 'http://127.0.0.1:' + port + '/v1/cards/';
-  const city = base + 'contrib-3d.svg?source=cnb&subject=author&animate=false';
+  const city = base + 'activity/city.svg?source=cnb&subject=author&animate=false';
   const expected = await renderer.render(
-    resolveCardRequest(configuration, registry, 'contrib-3d', {
+    resolveCardRequest(configuration, registry, 'activity/city', {
       inputs: [{ source: 'test', params: { source: 'cnb', subject: 'author', animate: false } }],
     }),
   );
@@ -192,7 +190,10 @@ it('serves city and shooter formats and rejects future calendar years as request
   expect(await invalid.text()).toContain('year');
   for (const format of ['gif', 'webp']) {
     const response = await fetch(
-      base + 'space-shooter.' + format + '?source=cnb&subject=author&strategy=row&fps=5&duration=8',
+      base +
+        'activity/shooter.' +
+        format +
+        '?source=cnb&subject=author&strategy=row&fps=5&duration=8',
     );
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe('image/' + format);
@@ -254,12 +255,12 @@ it('delivers identical language and repository media through CLI, plugin setting
     ),
     ...fixtureEnvironment,
   };
-  for (const id of ['languages', 'repo'])
+  for (const id of ['profile/languages', 'repository/overview'])
     for (const source of ['github', 'cnb']) {
       const params = {
         source,
         subject:
-          id === 'languages'
+          id === 'profile/languages'
             ? 'author'
             : source === 'github'
               ? 'author/project'
@@ -305,7 +306,7 @@ it('delivers identical language and repository media through CLI, plugin setting
     }
   const plugin = await cli(['render'], {
     ...environment,
-    PLUGIN_CARD: 'languages',
+    PLUGIN_CARD: 'profile/languages',
     PLUGIN_CONFIG: config,
     PLUGIN_PARAMS: '{"source":"cnb","subject":"author","include-forks":true,"limit":1}',
     PLUGIN_OUTPUT: '-',
@@ -313,12 +314,14 @@ it('delivers identical language and repository media through CLI, plugin setting
   expect(plugin.code, plugin.stderr).toBe(0);
   expect(plugin.stdout.toString()).toContain('其他语言');
   const invalidUrl =
-    'http://127.0.0.1:' + imagePort + '/v1/cards/languages?source=cnb&subject=author&metric=bytes';
+    'http://127.0.0.1:' +
+    imagePort +
+    '/v1/cards/profile/languages?source=cnb&subject=author&metric=bytes';
   expect((await fetch(invalidUrl)).status).toBe(400);
   const invalid = await cli(
     [
       'render',
-      'languages',
+      'profile/languages',
       '--source',
       'cnb',
       '--subject',
@@ -360,7 +363,13 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
           cnb: { 'base-url': 'http://127.0.0.1:' + port + '/cnb' },
         },
       },
-      jobs: [{ card: 'stats', params: { source: 'cnb', subject: 'author' }, output: 'batch.svg' }],
+      jobs: [
+        {
+          card: 'profile/stats',
+          params: { source: 'cnb', subject: 'author' },
+          output: 'batch.svg',
+        },
+      ],
     }),
   );
   const environment = {
@@ -378,7 +387,18 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(version.code, version.stderr).toBe(0);
   expect(version.stdout.toString()).toMatch(/^\d+\.\d+\.\d+/);
   const render = await cli(
-    ['render', 'stats', '--config', config, '--source', 'cnb', '--subject', 'author', '-o', target],
+    [
+      'render',
+      'profile/stats',
+      '--config',
+      config,
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '-o',
+      target,
+    ],
     environment,
   );
   expect(render.code, render.stderr).toBe(0);
@@ -386,7 +406,7 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   const stdout = await cli(
     [
       'render',
-      'stats',
+      'profile/stats',
       '--config',
       config,
       '--source',
@@ -404,7 +424,7 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(stdout.stdout.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   const plugin = await cli(['render'], {
     ...environment,
-    PLUGIN_CARD: 'stats',
+    PLUGIN_CARD: 'profile/stats',
     PLUGIN_SOURCE: 'cnb',
     PLUGIN_SUBJECT: 'author',
     PLUGIN_CONFIG: config,
@@ -415,7 +435,17 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(batch.code, batch.stderr).toBe(0);
   expect(await readFile(resolve(cwd, 'batch.svg'), 'utf8')).toContain('测试用户');
   const preview = await cli(
-    ['render', 'stats', '--config', config, '--source', 'cnb', '--subject', 'author', '--dry-run'],
+    [
+      'render',
+      'profile/stats',
+      '--config',
+      config,
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--dry-run',
+    ],
     { ...environment, CNB_TOKEN: '' },
   );
   expect(preview.code, preview.stderr).toBe(0);
@@ -424,12 +454,12 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
     subject: 'author',
   });
   expect(preview.stdout.toString()).not.toContain('fixture-github-token');
-  const invalid = await cli(['render', 'stats', '--subject', 'author'], environment);
+  const invalid = await cli(['render', 'profile/stats', '--subject', 'author'], environment);
   expect(invalid.code).toBe(2);
   const city = await cli(
     [
       'render',
-      'contrib-3d',
+      'activity/city',
       '--config',
       config,
       '--source',
@@ -446,7 +476,18 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   expect(city.code, city.stderr).toBe(0);
   expect(city.stdout.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
   const future = await cli(
-    ['render', 'contrib-3d', '--source', 'cnb', '--subject', 'author', '--year', '9999', '-o', '-'],
+    [
+      'render',
+      'activity/city',
+      '--source',
+      'cnb',
+      '--subject',
+      'author',
+      '--year',
+      '9999',
+      '-o',
+      '-',
+    ],
     environment,
   );
   expect(future.code).toBe(2);
@@ -454,7 +495,7 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   const previewFuture = await cli(
     [
       'render',
-      'contrib-3d',
+      'activity/city',
       '--source',
       'cnb',
       '--subject',
@@ -470,7 +511,7 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
   const shooter = await cli(
     [
       'render',
-      'space-shooter',
+      'activity/shooter',
       '--config',
       config,
       '--source',
@@ -525,7 +566,7 @@ it('maps plugin tokens to configured provider environments without exposing thei
     CUSTOM_CNB_TOKEN: '',
     CNB_TOKEN: 'wrong-default-token',
     PLUGIN_CONFIG: config,
-    PLUGIN_CARD: 'repo',
+    PLUGIN_CARD: 'repository/overview',
     PLUGIN_PARAMS: '{"source":"cnb","subject":"author/group/project"}',
     PLUGIN_TOKENS: JSON.stringify({ cnb: token }),
     PLUGIN_FORMAT: 'png',
@@ -554,7 +595,6 @@ it('limits concurrent drawing and encoding and releases a failed job for the nex
     let maximum = 0;
     let fail = true;
     const entry = defineCard({
-      id: 'queue-test',
       params: z.strictObject({ index: z.number().int() }),
       formats: ['svg'],
       themes: ['default'],
@@ -574,7 +614,7 @@ it('limits concurrent drawing and encoding and releases a failed job for the nex
         }
       },
     });
-    const entries = createCardRegistry([entry]);
+    const entries = createCardRegistry([bindCard('queue-test', entry)]);
     const configuration = await loadConfiguration(entries, {
       cwd: await folder(),
       environment: { COOLP__RUNTIME__RENDER_CONCURRENCY: String(concurrency) },

@@ -69,7 +69,7 @@ main:
           image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
           args: [render]
           settings:
-            card: repo
+            card: repository/overview
             params: { source: cnb, subject: $CNB_REPO_SLUG }
             format: png
             output: .cache/plugin-smoke.png

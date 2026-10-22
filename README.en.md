@@ -9,25 +9,25 @@ animations, space shooters, 3D activity calendars, and statistics cards.
 
 ## Preview
 
-![CNB activity snake](cards/snake/examples/cnb-default.en.svg)
+![CNB activity snake](cards/activity/snake/examples/cnb-default.en.svg)
 
-![GitHub rainbow snake](cards/snake/examples/github-rainbow.en.svg)
+![GitHub rainbow snake](cards/activity/snake/examples/github-rainbow.en.svg)
 
-![CNB 3D activity calendar](cards/contrib-3d/examples/cnb-default.en.svg)
+![CNB 3D activity calendar](cards/activity/city/examples/cnb-default.en.svg)
 
-![GitHub block calendar](cards/contrib-3d/examples/github-blocks.en.svg)
+![GitHub block calendar](cards/activity/city/examples/github-blocks.en.svg)
 
-![CNB space shooter](cards/space-shooter/examples/cnb-default.en.gif)
+![CNB space shooter](cards/activity/shooter/examples/cnb-default.en.gif)
 
-![GitHub arcade space shooter](cards/space-shooter/examples/github-arcade.en.gif)
+![GitHub arcade space shooter](cards/activity/shooter/examples/github-arcade.en.gif)
 
-![CNB statistics card](cards/stats/examples/cnb-default.en.svg)
+![CNB statistics card](cards/profile/stats/examples/cnb-default.en.svg)
 
-![GitHub dark statistics card](cards/stats/examples/github-dark.en.svg)
+![GitHub dark statistics card](cards/profile/stats/examples/github-dark.en.svg)
 
-![CNB language distribution](cards/stats/examples/languages-cnb-default.en.svg)
+![CNB language distribution](cards/profile/languages/examples/cnb-default.en.svg)
 
-![GitHub dark repository card](cards/stats/examples/repo-github-dark.en.svg)
+![GitHub dark repository card](cards/repository/overview/examples/github-dark.en.svg)
 
 ## CLI
 
@@ -35,7 +35,7 @@ Generate a file with the image:
 
 ```sh
 docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN \
-  docker.cnb.cool/elonzh/cool-profile:latest render snake --source cnb --subject elonzh --locale en --output snake.svg
+  docker.cnb.cool/elonzh/cool-profile:latest render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
 ```
 
 To run from source, use Node.js 24+ and pnpm. Run these commands once from the repository:
@@ -49,14 +49,14 @@ GitHub stats and calendars use `GITHUB_TOKEN`; CNB uses `CNB_TOKEN`. CNB tokens 
 `account-engage:r`; repository cards also need `repo-basic-info:r`.
 
 ```sh
-pnpm coolp render snake --source cnb --subject elonzh --locale en --output snake.svg
-pnpm coolp render snake --source github --subject elonzh --format gif --theme rainbow --locale en --output snake.gif
-pnpm coolp render contrib-3d --source cnb --subject elonzh --format png --theme blocks --locale en --output city.png
-pnpm coolp render space-shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
-pnpm coolp render stats --source cnb --subject elonzh --locale en --output stats.svg
-pnpm coolp render stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
-pnpm coolp render languages --source cnb --subject elonzh --locale en --output languages.svg
-pnpm coolp render repo --source github --subject Platane/snk --theme dark --locale en --output repo.svg
+pnpm coolp render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
+pnpm coolp render activity/snake --source github --subject elonzh --format gif --theme rainbow --locale en --output snake.gif
+pnpm coolp render activity/city --source cnb --subject elonzh --format png --theme blocks --locale en --output city.png
+pnpm coolp render activity/shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
+pnpm coolp render profile/stats --source cnb --subject elonzh --locale en --output stats.svg
+pnpm coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+pnpm coolp render profile/languages --source cnb --subject elonzh --locale en --output languages.svg
+pnpm coolp render repository/overview --source github --subject Platane/snk --theme dark --locale en --output repo.svg
 ```
 
 Replace subject with your account, or a full repository path for repo cards. Languages default to code bytes on
@@ -80,7 +80,7 @@ main:
           image: docker.cnb.cool/elonzh/cool-profile:latest
           args: [render]
           settings:
-            card: snake
+            card: activity/snake
             params: { source: cnb, subject: elonzh }
             tokens: { cnb: $PROFILE_CNB_TOKEN }
             theme: dark
@@ -98,7 +98,7 @@ steps:
   - uses: actions/checkout@v6
   - uses: elonzh/cool-profile@main
     with:
-      card: snake
+      card: activity/snake
       params: '{"source":"github","subject":"${{ github.repository_owner }}"}'
       theme: rainbow
       locale: en
@@ -117,7 +117,7 @@ docker run --rm -p 3000:3000 -e GITHUB_TOKEN -e CNB_TOKEN \
 Open `http://localhost:3000/?ui=en` to explore effects, edit parameters, generate images and copy commands, URLs or
 configuration.
 
-Use `http://localhost:3000/v1/cards/stats.svg?source=cnb&subject=elonzh&locale=en` for a direct image.
+Use `http://localhost:3000/v1/cards/profile/stats.svg?source=cnb&subject=elonzh&locale=en` for a direct image.
 Add `theme=dark` to change the theme, or use the `.png` extension for PNG output.
 
 [GitHub](https://github.com/elonzh/cool-profile) · [CNB](https://cnb.cool/elonzh/cool-profile)

@@ -1,48 +1,55 @@
 import { readdir, readFile, realpath, mkdir, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { createCardRegistry, isCard } from '../packages/card-kit/src/index.js';
+import {
+  cardIdPattern,
+  bindCard,
+  createCardRegistry,
+  isCardModule,
+} from '../packages/card-kit/src/index.js';
 import type { Card } from '../packages/card-kit/src/index.js';
 
 export interface CardPackage {
+  id: string;
   name: string;
   directory: string;
   entry: string;
 }
 
 export async function discoverCardPackages(root: string): Promise<CardPackage[]> {
-  const directory = resolve(root, 'cards');
-  const entries = await readdir(directory, { withFileTypes: true }).catch((error: unknown) => {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return [];
-    throw error;
-  });
+  const base = resolve(root, 'cards');
   const packages: CardPackage[] = [];
-  for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name, 'en'))) {
-    if (!entry.isDirectory() || entry.name.startsWith('.')) continue;
-    const packageDirectory = resolve(directory, entry.name);
-    const manifest: unknown = JSON.parse(
-      await readFile(resolve(packageDirectory, 'package.json'), 'utf8'),
-    );
-    if (!manifest || typeof manifest !== 'object') throw new Error('Invalid card package manifest');
-    const name: unknown = Reflect.get(manifest, 'name');
-    const coolp: unknown = Reflect.get(manifest, 'coolp');
-    const cardEntry: unknown =
-      coolp && typeof coolp === 'object' ? Reflect.get(coolp, 'card-entry') : undefined;
-    if (typeof name !== 'string' || typeof cardEntry !== 'string' || !cardEntry) {
-      throw new Error(packageDirectory + ': name and coolp.card-entry are required');
-    }
-    const absoluteEntry = await realpath(resolve(packageDirectory, cardEntry));
-    const packageRoot = await realpath(packageDirectory);
-    const entryRelative = relative(packageRoot, absoluteEntry);
-    if (entryRelative === '..' || entryRelative.startsWith('..' + sep)) {
-      throw new Error(name + ': card-entry must be inside its package');
-    }
-    packages.push({
-      name,
-      directory: packageDirectory,
-      entry: resolve(packageDirectory, cardEntry),
+  async function visit(directory: string, top = false): Promise<void> {
+    const entries = await readdir(directory, { withFileTypes: true }).catch((error: unknown) => {
+      if (top && error instanceof Error && 'code' in error && error.code === 'ENOENT') return [];
+      throw error;
     });
+    if (entries.some((entry) => entry.name === 'package.json' && entry.isFile())) {
+      const id = relative(base, directory).split(sep).join('/');
+      if (!cardIdPattern.test(id)) throw new Error(directory + ': invalid card directory');
+      const manifest: unknown = JSON.parse(
+        await readFile(resolve(directory, 'package.json'), 'utf8'),
+      );
+      const name: unknown =
+        manifest && typeof manifest === 'object' ? Reflect.get(manifest, 'name') : undefined;
+      if (typeof name !== 'string' || !name)
+        throw new Error(directory + ': package name is required');
+      const entry = resolve(directory, 'src/index.ts');
+      const absoluteEntry = await realpath(entry);
+      const packageRoot = await realpath(directory);
+      const entryRelative = relative(packageRoot, absoluteEntry);
+      if (entryRelative === '..' || entryRelative.startsWith('..' + sep))
+        throw new Error(id + ': src/index.ts must be inside its package');
+      packages.push({ id, name, directory, entry });
+      return;
+    }
+    for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name, 'en'))) {
+      if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === 'node_modules')
+        continue;
+      await visit(resolve(directory, entry.name));
+    }
   }
+  await visit(base, true);
   return packages;
 }
 
@@ -50,12 +57,11 @@ export async function loadCardPackages(packages: readonly CardPackage[]): Promis
   const cards: Card[] = [];
   for (const item of packages) {
     const module: unknown = await import(pathToFileURL(item.entry).href);
-    const exports: unknown =
-      module && typeof module === 'object' ? Reflect.get(module, 'cards') : undefined;
-    if (!Array.isArray(exports) || !exports.length || !exports.every(isCard)) {
-      throw new Error(item.name + ': export a nonempty cards array built with defineCard');
-    }
-    cards.push(...exports);
+    const definition: unknown =
+      module && typeof module === 'object' ? Reflect.get(module, 'default') : undefined;
+    if (!isCardModule(definition))
+      throw new Error(item.id + ': default-export one card built with defineCard');
+    cards.push(bindCard(item.id, definition));
   }
   createCardRegistry(cards);
   return cards;
@@ -65,16 +71,23 @@ export async function writeCardRegistry(
   packages: readonly CardPackage[],
   target: string,
 ): Promise<void> {
-  const imports = packages.map((item, index) => {
-    let path = relative(dirname(target), item.entry).split(sep).join('/');
-    if (!path.startsWith('.')) path = './' + path;
-    return 'import { cards as cards' + index + ' } from ' + JSON.stringify(path) + ';';
-  });
-  const array = packages.map((_, index) => '...cards' + index).join(', ');
+  const modulePath = (file: string) => {
+    const path = relative(dirname(target), file).split(sep).join('/');
+    return JSON.stringify(path.startsWith('.') ? path : './' + path);
+  };
   const output = [
-    '// Generated by pnpm cards:discover. Edit card packages instead.',
-    ...imports,
-    'export const cards = [' + array + '];',
+    '// Generated by pnpm cards:discover. IDs come from card directories.',
+    'import { bindCard } from ' +
+      modulePath(resolve(import.meta.dirname, '../packages/card-kit/src/index.ts')) +
+      ';',
+    ...packages.map(
+      (item, index) => 'import card' + index + ' from ' + modulePath(item.entry) + ';',
+    ),
+    'export const cards = [' +
+      packages
+        .map((item, index) => 'bindCard(' + JSON.stringify(item.id) + ', card' + index + ')')
+        .join(', ') +
+      '];',
     '',
   ].join('\n');
   await mkdir(dirname(target), { recursive: true });

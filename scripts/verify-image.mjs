@@ -40,7 +40,7 @@ async function verifyRuntime(fixture) {
     const params = { source: 'github', subject: 'author/project' };
     const args = [
       'render',
-      'repo',
+      'repository/overview',
       '--params',
       JSON.stringify(params),
       '--format',
@@ -61,7 +61,7 @@ async function verifyRuntime(fixture) {
           ...env,
           GITHUB_TOKEN: '',
           INPUT_GITHUB_TOKEN: 'fixture-token',
-          INPUT_CARD: 'repo',
+          INPUT_CARD: 'repository/overview',
           INPUT_PARAMS: JSON.stringify(params),
           INPUT_FORMAT: 'png',
           INPUT_LOCALE: 'en',
@@ -78,7 +78,7 @@ async function verifyRuntime(fixture) {
           ...env,
           GITHUB_TOKEN: '',
           PLUGIN_TOKENS: '{"github":"fixture-token"}',
-          PLUGIN_CARD: 'repo',
+          PLUGIN_CARD: 'repository/overview',
           PLUGIN_PARAMS: JSON.stringify(params),
           PLUGIN_FORMAT: 'png',
           PLUGIN_LOCALE: 'en',
@@ -97,7 +97,7 @@ async function verifyRuntime(fixture) {
       logs += chunk;
     });
     const url =
-      'http://127.0.0.1:33000/v1/cards/repo.png?source=github&subject=author%2Fproject&locale=en&theme=dark';
+      'http://127.0.0.1:33000/v1/cards/repository/overview.png?source=github&subject=author%2Fproject&locale=en&theme=dark';
     let response;
     for (let attempt = 0; attempt < 40; attempt++) {
       try {

@@ -145,10 +145,8 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   const examples = resolve(root, 'examples');
   await mkdir(examples);
   const manifest = {
-    'profile/overview': {
-      name: { 'zh-CN': '融合卡', en: 'Combined' },
-      cases: [{ pattern: 'combined-*', params: { 'github-user': 'one', 'cnb-user': 'two' } }],
-    },
+    name: { 'zh-CN': '融合卡', en: 'Combined' },
+    cases: [{ pattern: 'combined-*', params: { 'github-user': 'one', 'cnb-user': 'two' } }],
   };
   await writeFile(resolve(examples, 'manifest.json'), JSON.stringify(manifest));
   const svg =
@@ -156,10 +154,16 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   for (const locale of ['zh-CN', 'en'])
     await writeFile(resolve(examples, 'combined-default.' + locale + '.svg'), svg);
   const packages = [
-    { name: 'fusion', directory: root, entry: resolve('test/fixtures/profile-card.ts') },
+    {
+      id: 'profile/overview',
+      name: 'fusion',
+      directory: root,
+      entry: resolve('test/fixtures/profile-card.ts'),
+    },
   ];
   const target = resolve(root, 'generated/catalog.ts');
   const catalog = await writeGalleryCatalog(packages, target);
+  expect(catalog[0]?.id).toBe('profile/overview');
   expect(catalog[0]?.cases[0]?.params).toEqual({ 'github-user': 'one', 'cnb-user': 'two' });
   expect(catalog[0]?.cases[0]?.samples.map((sample) => sample.locale).sort()).toEqual([
     'en',
@@ -173,7 +177,7 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   ).toBe(true);
   await writeFile(
     resolve(examples, 'manifest.json'),
-    JSON.stringify({ unknown: manifest['profile/overview'] }),
+    JSON.stringify({ ...manifest, id: 'arbitrary' }),
   );
-  await expect(writeGalleryCatalog(packages, target)).rejects.toThrow('unknown card');
+  await expect(writeGalleryCatalog(packages, target)).rejects.toThrow('Unrecognized');
 });

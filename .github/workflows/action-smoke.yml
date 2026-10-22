@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./
         with:
-          card: repo
+          card: repository/overview
           params: '{"source":"github","subject":"Platane/snk"}'
           format: png
           theme: dark

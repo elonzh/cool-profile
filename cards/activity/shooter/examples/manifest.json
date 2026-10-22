@@ -1,0 +1,22 @@
+{
+  "name": {
+    "zh-CN": "太空射击",
+    "en": "Space shooter"
+  },
+  "cases": [
+    {
+      "pattern": "cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh"
+      }
+    },
+    {
+      "pattern": "github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh"
+      }
+    }
+  ]
+}

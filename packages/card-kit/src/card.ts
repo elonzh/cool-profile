@@ -51,7 +51,6 @@ export interface ValidationContext {
 }
 
 export interface CardDefinition<S extends z.ZodObject, Data> {
-  id: string;
   params: S;
   formats: readonly MediaFormat[];
   themes: readonly string[];
@@ -66,9 +65,8 @@ export interface CardDefinition<S extends z.ZodObject, Data> {
   render(ctx: RenderContext, data: Data, params: z.output<S>): Graphic | Promise<Graphic>;
 }
 
-export interface Card {
+export interface CardModule {
   readonly [marker]: true;
-  readonly id: string;
   readonly params: z.ZodObject;
   readonly parameterSchema: z.core.JSONSchema.JSONSchema;
   readonly formats: readonly MediaFormat[];
@@ -84,6 +82,10 @@ export interface Card {
     loadContext: LoadContext,
     params: Record<string, unknown>,
   ): Promise<(context: RenderContext) => Graphic | Promise<Graphic>>;
+}
+
+export interface Card extends CardModule {
+  readonly id: string;
 }
 
 function nonemptyUnique(values: readonly string[], field: string): void {
@@ -131,25 +133,26 @@ function parameterMetadata(schema: z.ZodObject): z.core.JSONSchema.JSONSchema {
   return input;
 }
 
-export function defineCard<S extends z.ZodObject, Data>(definition: CardDefinition<S, Data>): Card {
-  const { id } = definition;
-  if (!cardIdPattern.test(id)) throw new ConfigurationError('Invalid card ID: ' + id);
+export function defineCard<S extends z.ZodObject, Data>(
+  definition: CardDefinition<S, Data>,
+): CardModule {
+  if ('id' in definition) throw new ConfigurationError('Card ID comes from its directory; omit id');
   for (const [name, values] of Object.entries({
     formats: definition.formats,
     themes: definition.themes,
     locales: definition.locales,
   }))
-    nonemptyUnique(values, id + '.' + name);
+    nonemptyUnique(values, 'Card.' + name);
   if (definition.formats.some((format) => !mediaFormats.has(format))) {
-    throw new ConfigurationError(id + ': unsupported media format');
+    throw new ConfigurationError('Card: unsupported media format');
   }
   if (!definition.themes.includes('default') || !definition.locales.includes('zh-CN')) {
-    throw new ConfigurationError(id + ': default theme and zh-CN locale are required');
+    throw new ConfigurationError('Card: default theme and zh-CN locale are required');
   }
   const parameterSchema = parameterMetadata(definition.params);
   const defaults = (media: MediaOptions): Record<string, unknown> => {
     const value = definition.defaults?.(media) ?? {};
-    validatePatch(definition.params, value, id + '.defaults');
+    validatePatch(definition.params, value, 'Card.defaults');
     return value;
   };
   for (const format of definition.formats) {
@@ -157,7 +160,6 @@ export function defineCard<S extends z.ZodObject, Data>(definition: CardDefiniti
   }
   return Object.freeze({
     [marker]: true,
-    id,
     params: definition.params,
     parameterSchema,
     formats: Object.freeze([...definition.formats]),
@@ -172,17 +174,25 @@ export function defineCard<S extends z.ZodObject, Data>(definition: CardDefiniti
       const data = await definition.load(loadContext, params);
       return (renderContext: RenderContext) => definition.render(renderContext, data, params);
     },
-  } satisfies Card);
+  } satisfies CardModule);
 }
 
-export function isCard(value: unknown): value is Card {
+export function isCardModule(value: unknown): value is CardModule {
   return typeof value === 'object' && value !== null && Reflect.get(value, marker) === true;
+}
+
+export function bindCard(id: string, module: CardModule): Card {
+  if (!cardIdPattern.test(id)) throw new ConfigurationError('Invalid card ID: ' + id);
+  if (!isCardModule(module) || 'id' in module)
+    throw new ConfigurationError('Export an unbound card module created with defineCard');
+  return Object.freeze({ ...module, id });
 }
 
 export function createCardRegistry(cards: readonly Card[]): ReadonlyMap<string, Card> {
   const registry = new Map<string, Card>();
   for (const card of cards) {
-    if (!isCard(card)) throw new ConfigurationError('Card entries must be created with defineCard');
+    if (!isCardModule(card) || typeof card.id !== 'string' || !cardIdPattern.test(card.id))
+      throw new ConfigurationError('Card registry entries require a path-derived ID');
     if (registry.has(card.id)) throw new ConfigurationError('Duplicate card ID: ' + card.id);
     registry.set(card.id, card);
   }

@@ -1,6 +1,7 @@
-export { cardIdPattern, createCardRegistry, defineCard, isCard } from './card.js';
+export { cardIdPattern, createCardRegistry, defineCard, bindCard, isCardModule } from './card.js';
 export type {
   Card,
+  CardModule,
   CardDefinition,
   LoadContext,
   RenderContext,

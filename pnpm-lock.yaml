@@ -112,62 +112,92 @@ importers:
         specifier: 'catalog:'
         version: 8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(tsx@4.23.15)(yaml@2.9.1)
 
-  cards/contrib-3d:
+  cards/activity/city:
     dependencies:
       '@cool-profile/card-kit':
         specifier: workspace:*
-        version: link:../../packages/card-kit
+        version: link:../../../packages/card-kit
       '@cool-profile/data':
         specifier: workspace:*
-        version: link:../../packages/data
+        version: link:../../../packages/data
       '@cool-profile/graphics':
         specifier: workspace:*
-        version: link:../../packages/graphics
+        version: link:../../../packages/graphics
       zod:
         specifier: 'catalog:'
         version: 4.6.7
 
-  cards/snake:
+  cards/activity/shooter:
     dependencies:
       '@cool-profile/card-kit':
         specifier: workspace:*
-        version: link:../../packages/card-kit
+        version: link:../../../packages/card-kit
       '@cool-profile/data':
         specifier: workspace:*
-        version: link:../../packages/data
+        version: link:../../../packages/data
       '@cool-profile/graphics':
         specifier: workspace:*
-        version: link:../../packages/graphics
+        version: link:../../../packages/graphics
       zod:
         specifier: 'catalog:'
         version: 4.6.7
 
-  cards/space-shooter:
+  cards/activity/snake:
     dependencies:
       '@cool-profile/card-kit':
         specifier: workspace:*
-        version: link:../../packages/card-kit
+        version: link:../../../packages/card-kit
       '@cool-profile/data':
         specifier: workspace:*
-        version: link:../../packages/data
+        version: link:../../../packages/data
       '@cool-profile/graphics':
         specifier: workspace:*
-        version: link:../../packages/graphics
+        version: link:../../../packages/graphics
       zod:
         specifier: 'catalog:'
         version: 4.6.7
 
-  cards/stats:
+  cards/profile/languages:
     dependencies:
       '@cool-profile/card-kit':
         specifier: workspace:*
-        version: link:../../packages/card-kit
+        version: link:../../../packages/card-kit
       '@cool-profile/data':
         specifier: workspace:*
-        version: link:../../packages/data
+        version: link:../../../packages/data
       '@cool-profile/graphics':
         specifier: workspace:*
-        version: link:../../packages/graphics
+        version: link:../../../packages/graphics
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+
+  cards/profile/stats:
+    dependencies:
+      '@cool-profile/card-kit':
+        specifier: workspace:*
+        version: link:../../../packages/card-kit
+      '@cool-profile/data':
+        specifier: workspace:*
+        version: link:../../../packages/data
+      '@cool-profile/graphics':
+        specifier: workspace:*
+        version: link:../../../packages/graphics
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+
+  cards/repository/overview:
+    dependencies:
+      '@cool-profile/card-kit':
+        specifier: workspace:*
+        version: link:../../../packages/card-kit
+      '@cool-profile/data':
+        specifier: workspace:*
+        version: link:../../../packages/data
+      '@cool-profile/graphics':
+        specifier: workspace:*
+        version: link:../../../packages/graphics
       zod:
         specifier: 'catalog:'
         version: 4.6.7

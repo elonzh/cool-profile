@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。stats、languages、repo 提供中英文、明暗主题和 SVG/PNG 输出；snake 提供原生、深色、彩虹主题和 SVG/GIF 动画。contrib-3d 已支持 SVG/PNG、五种主题与 SVG 生长动画；space-shooter 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊提供六种效果的真实样张、参数编辑和实时生成。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。`profile/stats`、`profile/languages`、`repository/overview` 提供中英文、明暗主题和 SVG/PNG 输出；`activity/snake` 提供原生、深色、彩虹主题和 SVG/GIF 动画。`activity/city` 已支持 SVG/PNG、五种主题与 SVG 生长动画；`activity/shooter` 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊提供六种效果的真实样张、参数编辑和实时生成。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -27,7 +27,7 @@ flowchart TD
   Snapshot --> Draw[卡片 render]
   Draw --> Graphics[图形与媒体编码]
   Graphics --> Delivery[文件 / HTTP 响应]
-  Discovery[cards/* 构建时发现] --> Registry[生成的卡片注册表]
+  Discovery[cards/** 构建时发现] --> Registry[生成的卡片注册表]
   Registry --> App
 ```
 
@@ -40,26 +40,23 @@ flowchart TD
 | `packages/card-kit` | 小型卡片协议：defineCard、上下文类型、参数 schema 约束及定义校验   |
 | `packages/data`     | 数据能力、快照类型、适配器与认证、分页、限流；类型通过独立入口导出 |
 | `packages/graphics` | 图元、排版、主题、语言格式化、时间轴及 SVG/PNG/GIF/WebP 编码       |
-| `cards/*`           | 卡片代码包，各自维护参数、取数组合、布局或模拟、文案和样张         |
+| `cards/**`          | 卡片代码包，各自维护参数、取数组合、布局或模拟、文案和样张         |
 
 卡片依赖 card-kit、图形包及数据类型；应用装配具体数据客户端。load 可以调用该客户端组合多个数据源，HTTP 请求和令牌处理在数据适配器内完成。render 只消费已取得的快照，不访问网络、令牌或 Git。编码器按格式加载，图形与模拟代码不绑定 CLI 或 HTTP。
 
 ## 卡片 ID 与发现
 
-卡片 ID 是稳定名称，可以是 `snake`、`bilibili/card-id` 或 `profile/overview`。每一段匹配 `[a-z0-9]+(?:-[a-z0-9]+)*`，段间用斜杠连接。ID 不含空段、点或扩展名，URL 仅在最后一段追加媒体扩展名。
+卡片 ID 等于包目录相对于 `cards/` 的路径，使用 `/` 分隔。例如 `cards/activity/city` 的 ID 为 `activity/city`，`cards/profile/stats` 的 ID 为 `profile/stats`。单层目录也有效：`cards/example` 对应 `example`。每段使用小写 kebab-case，匹配 `[a-z0-9]+(?:-[a-z0-9]+)*`；不含空段、点或扩展名。
 
-命名空间由卡片作者选择。ID、npm 包名、目录名和数据源互相独立；`profile/overview` 可以同时使用 GitHub 与 CNB，`bilibili/card-id` 也可以使用其他来源的补充数据。
+按卡片展示的内容组织目录：activity 是活跃日历效果，profile 是账号资料，repository 是仓库信息。目录名称表达产品中的功能，不沿用参考仓库的项目名，也不按当前数据源拆分同一种效果。融合卡片同样从自己的路径取得 ID，可组合多个数据源。
 
-workspace 包含 `apps/*`、`packages/*` 和 `cards/*`。构建流程扫描 `cards/*/package.json` 中的 `coolp.card-entry`，入口统一导出 `cards` 数组。一个包可以提供多张相关卡片，例如 stats 包导出 stats、languages、repo。
+workspace 包含 `apps/*`、`packages/*` 和 `cards/**`。一个卡片包对应一个 ID，固定入口为 `src/index.ts`，默认导出 `defineCard(...)`。卡片代码、package.json 和样张清单都不声明 ID，npm 包名只用于 workspace 依赖管理。
 
 ```json
 {
-  "name": "@cool-profile/card-profile",
+  "name": "@cool-profile/card-profile-overview",
   "private": true,
   "type": "module",
-  "coolp": {
-    "card-entry": "./src/index.ts"
-  },
   "dependencies": {
     "@cool-profile/card-kit": "workspace:*",
     "@cool-profile/graphics": "workspace:*",
@@ -68,9 +65,9 @@ workspace 包含 `apps/*`、`packages/*` 和 `cards/*`。构建流程扫描 `car
 }
 ```
 
-构建时校验卡片定义，再生成带静态模块路径的注册表；产物随应用打包进 CLI 和镜像。卡片目录无需部署到运行机器。新增包参与正常的 workspace 依赖安装及构建，不需要编辑中心注册列表、HTTP 路由或帮助文本。开发时重新构建即可发现新包。
+发现脚本递归扫描卡片包，从目录计算 ID 并校验固定入口和单张卡片的默认导出。构建生成的注册表使用 `bindCard` 绑定路径与定义，随应用打包进 CLI 和镜像；运行时无须扫描文件系统。添加卡片只需创建符合约定的包并构建，无需编辑中心列表、HTTP 路由或帮助文本。移动目录即改变对外 ID，改动时同步命令、URL、配置、流水线及样张链接。
 
-注册校验包括 ID 唯一性、入口和导出有效性、格式/主题/语言列表、schema 可描述性、参数名冲突及默认值合法性。重复 ID 导致构建失败，不依赖扫描顺序覆盖。卡片模块的顶层初始化不请求网络或读取运行配置。
+注册校验包括路径命名、ID 唯一性、入口与导出、格式/主题/语言列表、schema 可描述性、参数名冲突及默认值合法性。定义中自行提供 id 或重复绑定会报错。卡片模块的顶层初始化不请求网络或读取运行配置。
 
 ## 卡片协议与添加方式
 
@@ -80,7 +77,6 @@ workspace 包含 `apps/*`、`packages/*` 和 `cards/*`。构建流程扫描 `car
 
 ```ts
 interface CardDefinition<S extends z.ZodObject, Data> {
-  id: string;
   params: S;
   formats: readonly MediaFormat[];
   themes: readonly string[];
@@ -102,52 +98,49 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 - validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。ValidationContext 提供应用传入的 now；三个日历卡复用数据包的年份与时区规则，未来年份在 CLI、URL 和 dry-run 中都会被拒绝。
 - LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置和 text 排版函数，图元由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
 
-defineCard 将 load 和 render 封装为内部 prepare 方法，先取得快照，再返回保留类型信息的绘图函数。应用记录本次使用的快照版本及权限作用域，在绘图与编码之前查询媒体缓存。缓存仅属于应用实例；共享取数任务使用独立超时，某个 HTTP 客户端取消请求不取消其他消费者。
+`defineCard` 返回不含 ID 的 `CardModule`，构建时由发现步骤绑定路径，得到带 ID 的 `Card`。请求调用 `prepare` 时先获取快照，再得到保留类型信息的绘图函数。应用记录本次使用的快照版本及权限作用域，在绘图与编码之前查询媒体缓存。缓存仅属于应用实例；共享取数任务使用独立超时，某个 HTTP 客户端取消请求不取消其他消费者。
 
-添加一张融合卡片时，在 `cards/profile` 放入上述 package.json，并实现 `src/index.ts`、绘图代码及样张。以下示例使用首期选定的两个来源：
+添加一张融合卡片时，在 `cards/profile/overview` 放入上述 package.json，并实现 `src/index.ts`、绘图代码及样张。以下示例使用首期选定的两个来源：
 
 ```ts
 import * as z from 'zod';
 import { defineCard } from '@cool-profile/card-kit';
 import { drawOverview } from './draw.js';
 
-export const cards = [
-  defineCard({
-    id: 'profile/overview',
-    params: z.strictObject({
-      'github-user': z.string().min(1).describe('GitHub 账号'),
-      'cnb-user': z.string().min(1).describe('CNB 账号'),
-    }),
-    formats: ['svg', 'png'],
-    themes: ['default', 'dark'],
-    locales: ['zh-CN', 'en'],
-    async load(ctx, params) {
-      const [github, cnb] = await Promise.all([
-        ctx.data.read({
-          source: 'github',
-          kind: 'profile-stats',
-          subject: params['github-user'],
-        }),
-        ctx.data.read({
-          source: 'cnb',
-          kind: 'profile-stats',
-          subject: params['cnb-user'],
-        }),
-      ]);
-      return { github, cnb };
-    },
-    render(ctx, data) {
-      return drawOverview(data, ctx);
-    },
+export default defineCard({
+  params: z.strictObject({
+    'github-user': z.string().min(1).describe('GitHub 账号'),
+    'cnb-user': z.string().min(1).describe('CNB 账号'),
   }),
-];
+  formats: ['svg', 'png'],
+  themes: ['default', 'dark'],
+  locales: ['zh-CN', 'en'],
+  async load(ctx, params) {
+    const [github, cnb] = await Promise.all([
+      ctx.data.read({
+        source: 'github',
+        kind: 'profile-stats',
+        subject: params['github-user'],
+      }),
+      ctx.data.read({
+        source: 'cnb',
+        kind: 'profile-stats',
+        subject: params['cnb-user'],
+      }),
+    ]);
+    return { github, cnb };
+  },
+  render(ctx, data) {
+    return drawOverview(data, ctx);
+  },
+});
 ```
 
 绘图模块根据 ctx.media.locale 和主题排版，保留 GitHub 贡献数与 CNB 活跃分各自的名称、单位和范围。
 
 新增卡片的完成路径：
 
-1. 在 `cards/<package>` 实现导出定义、绘图和依赖；所需能力未存在时，在 packages/data 增加对应适配器或能力。
+1. 在 `cards/<分类>/<名称>` 实现单张卡片的默认导出、绘图和依赖；所需能力未存在时，在 packages/data 增加对应适配器或能力。
 2. 运行 workspace 安装与应用构建，由发现步骤生成注册表；使用 CLI 帮助检查格式、主题和参数。
 3. 通过 CLI 与 URL 生成同一请求，验收中英文、多主题和数据边界，补充画廊样张。算法或数据行为有风险时增加针对性验证。
 
@@ -160,11 +153,11 @@ coolp serve [--config <file>] [--host <address>] [--port <port>]
 ```
 
 ```sh
-coolp render stats --source cnb --subject elonzh --format svg --theme dark --locale zh-CN --output dist/stats.svg
+coolp render profile/stats --source cnb --subject elonzh --format svg --theme dark --locale zh-CN --output dist/stats.svg
 ```
 
 ```text
-GET /v1/cards/stats.svg?source=cnb&subject=elonzh&theme=dark&locale=zh-CN
+GET /v1/cards/profile/stats.svg?source=cnb&subject=elonzh&theme=dark&locale=zh-CN
 ```
 
 按上节添加融合卡片包后，可使用自己的参数，不必声明 source 或 subject：
@@ -208,37 +201,37 @@ CLI 省略 format、URL 省略扩展名时采用同一默认格式。URL 在最�
 
 ### 首期效果
 
-| ID                     | 参考                                                                                  | 默认 / 允许格式 |
-| ---------------------- | ------------------------------------------------------------------------------------- | --------------- |
-| snake                  | [Platane/snk](https://github.com/Platane/snk)                                         | svg / svg、gif  |
-| space-shooter          | [gh-space-shooter](https://github.com/czl9707/gh-space-shooter)                       | gif / gif、webp |
-| contrib-3d             | [github-profile-3d-contrib](https://github.com/yoshi389111/github-profile-3d-contrib) | svg / svg、png  |
-| stats、languages、repo | [github-stats-extended](https://github.com/stats-organization/github-stats-extended)  | svg / svg、png  |
+| ID                                                          | 展示                         | 参考                                                                                  | 默认 / 允许格式 |
+| ----------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- | --------------- |
+| `activity/snake`                                            | 活跃贪吃蛇                   | [Platane/snk](https://github.com/Platane/snk)                                         | svg / svg、gif  |
+| `activity/shooter`                                          | 太空射击                     | [gh-space-shooter](https://github.com/czl9707/gh-space-shooter)                       | gif / gif、webp |
+| `activity/city`                                             | 3D 活跃城市                  | [github-profile-3d-contrib](https://github.com/yoshi389111/github-profile-3d-contrib) | svg / svg、png  |
+| `profile/stats`、`profile/languages`、`repository/overview` | 个人统计、语言分布、仓库概览 | [github-stats-extended](https://github.com/stats-organization/github-stats-extended)  | svg / svg、png  |
 
-参考用于理解算法与效果，代码重新实现。四类效果同时支持 GitHub/CNB，统计卡使用来源实际提供的指标。统计类首期范围为 stats、languages、repo，不包含 Gist 与 WakaTime。
+参考用于理解算法与效果，代码重新实现。四类效果同时支持 GitHub/CNB，统计卡使用来源实际提供的指标。统计类首期范围为 `profile/stats`、`profile/languages`、`repository/overview`，不包含 Gist 与 WakaTime。
 
 日历卡缺省读取最近 365 天，year 指定来源时区下的日历年份。累计指标保留原始统计范围。太空射击 strategy 支持 column、row、random，默认 random；fps 默认 40。3D 的 animate 在 SVG 下默认 true、PNG 下默认 false。
 
-space-shooter 的 duration 默认 20 秒，允许 8..24；fps 允许 5..40。模拟按时间推进，与采样帧率独立。column 按列逐个清除，row 从底行向上清除，random 使用 seed 随机选列；每次命中该列最下方的存活目标。先瞄准、发射，再在命中时消除，累计原始活跃分或贡献数，清除后飞船回到起点。
+`activity/shooter` 的 duration 默认 20 秒，允许 8..24；fps 允许 5..40。模拟按时间推进，与采样帧率独立。column 按列逐个清除，row 从底行向上清除，random 使用 seed 随机选列；每次命中该列最下方的存活目标。先瞄准、发射，再在命中时消除，累计原始活跃分或贡献数，清除后飞船回到起点。
 
-contrib-3d 提供 default、dark、season、rainbow、blocks 主题。日历按周与星期投影，楼高对原始数值做对数缩放，积木主题量化高度并绘制凸点；夜景绘制窗灯，季节配色跟随每个日期的月份。零活跃日保留地块，中英文月份按实际字宽避让。SVG 可使用 animate=false 输出静态图；PNG 与 animate=true 的组合在取数前报错。
+`activity/city` 提供 default、dark、season、rainbow、blocks 主题。日历按周与星期投影，楼高对原始数值做对数缩放，积木主题量化高度并绘制凸点；夜景绘制窗灯，季节配色跟随每个日期的月份。零活跃日保留地块，中英文月份按实际字宽避让。SVG 可使用 animate=false 输出静态图；PNG 与 animate=true 的组合在取数前报错。
 
-snake 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。
+`activity/snake` 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。
 
-languages 汇总公开 Owner 仓库，默认排除 Fork，可用 include-forks=true 纳入。GitHub 默认 metric=bytes，完整读取各仓库的语言字节数；CNB 默认 metric=repositories，按仓库主要语言计数。两端都支持 repositories，CNB 不接受 bytes。图中标明统计单位和已识别语言的仓库数，未识别语言的仓库不进入百分比分母。limit 默认 6、范围 1..10，超出部分合并为“其他语言”，总量保持不变。GitHub 语言颜色来自随应用分发的 Linguist 色表，CNB 优先使用接口颜色。
+`profile/languages` 汇总公开 Owner 仓库，默认排除 Fork，可用 include-forks=true 纳入。GitHub 默认 metric=bytes，完整读取各仓库的语言字节数；CNB 默认 metric=repositories，按仓库主要语言计数。两端都支持 repositories，CNB 不接受 bytes。图中标明统计单位和已识别语言的仓库数，未识别语言的仓库不进入百分比分母。limit 默认 6、范围 1..10，超出部分合并为“其他语言”，总量保持不变。GitHub 语言颜色来自随应用分发的 Linguist 色表，CNB 优先使用接口颜色。
 
-repo 的 subject 为完整仓库路径：GitHub 使用 owner/repository，CNB 允许多层组织路径。卡片仅展示公开仓库，显示简介、主要语言、许可证、星标、Fork 和未关闭事项。GitHub 的 open_issues_count 包含合并请求，CNB 将 open_issue_count 与 open_pull_request_count 相加，图中统一标为“未关闭议题与合并请求”。空简介、未识别语言和未声明许可证分别显示对应状态。
+`repository/overview` 的 subject 为完整仓库路径：GitHub 使用 owner/repository，CNB 允许多层组织路径。卡片仅展示公开仓库，显示简介、主要语言、许可证、星标、Fork 和未关闭事项。GitHub 的 open_issues_count 包含合并请求，CNB 将 open_issue_count 与 open_pull_request_count 相加，图中统一标为“未关闭议题与合并请求”。空简介、未识别语言和未声明许可证分别显示对应状态。
 
 ```sh
-coolp render languages --source github --subject elonzh --metric repositories --include-forks true --limit 8 --output languages.svg
-coolp render repo --source cnb --subject elonzh/cool-profile --theme dark --output repo.png
+coolp render profile/languages --source github --subject elonzh --metric repositories --include-forks true --limit 8 --output languages.svg
+coolp render repository/overview --source cnb --subject elonzh/cool-profile --theme dark --output repo.png
 ```
 
 对应 URL：
 
 ```text
-/v1/cards/languages.svg?source=github&subject=elonzh&metric=repositories&include-forks=true&limit=8
-/v1/cards/repo.png?source=cnb&subject=elonzh%2Fcool-profile&theme=dark
+/v1/cards/profile/languages.svg?source=github&subject=elonzh&metric=repositories&include-forks=true&limit=8
+/v1/cards/repository/overview.png?source=cnb&subject=elonzh%2Fcool-profile&theme=dark
 ```
 
 图形包提供基础图元、时间轴和编码，各卡片维护自己的布局、模拟及文案。CNB 默认活跃色阶与徽章绿、GitHub 原生色阶，以及季节、夜景、彩虹、积木和游戏主题随效果实现。字体随镜像分发，每类效果以真实数据验收中英文与多主题样张。
@@ -280,7 +273,7 @@ defaults:
   theme: default
 
 cards:
-  stats:
+  profile/stats:
     render:
       theme: dark
     params:
@@ -288,9 +281,9 @@ cards:
       subject: elonzh
 
 jobs:
-  - card: stats
+  - card: profile/stats
     output: cnb-stats.svg
-  - card: stats
+  - card: profile/stats
     render:
       locale: en
     params:
@@ -311,7 +304,7 @@ runtime 和 defaults 使用 `COOLP__<区域>__<字段>`，双下划线分层，�
 export COOLP__RUNTIME__SERVER__PORT=8080
 export COOLP__RUNTIME__LOG_LEVEL=debug
 export COOLP__DEFAULTS__LOCALE=en
-export COOLP__CARDS='{"stats":{"params":{"subject":"another-user"}}}'
+export COOLP__CARDS='{"profile/stats":{"params":{"subject":"another-user"}}}'
 ```
 
 COOLP__CARDS 的值与文件的 cards 区域同构，可同时设置多张卡的 render 和 params，也支持含斜杠的 ID。这样无需把 ID 编码成有歧义的环境变量名。数组和对象使用 JSON，标量依据 schema 转换；空字符串保留为空值，不能隐式表示未配置。未知 COOLP__ 字段报错。其他应用或系统环境变量不参与参数合并。
@@ -349,7 +342,7 @@ runtime.render-concurrency 控制同一应用内同时绘图、编码的数量�
 
 先按相同来源内的作用域合并，再按来源优先级覆盖。因此环境中的全局 locale 可以覆盖文件中某张卡的 locale，URL 中的 locale 又能覆盖环境值。CLI 与 URL 的最终请求使用同一套函数，不从进程全局状态修改卡片定义。
 
-以上述文件和环境变量为例，执行 `coolp render stats --locale zh-CN --dry-run` 会得到 source=cnb、subject=another-user、theme=dark、locale=zh-CN：账号来自环境的卡片配置，主题来自文件的卡片配置，语言来自本次命令。
+以上述文件和环境变量为例，执行 `coolp render profile/stats --locale zh-CN --dry-run` 会得到 source=cnb、subject=another-user、theme=dark、locale=zh-CN：账号来自环境的卡片配置，主题来自文件的卡片配置，语言来自本次命令。
 
 先确定媒体设置，再用这些设置计算卡片参数 defaults，最后应用各层 params。defaults 函数只确定最低优先级的值，不能覆盖用户参数。对象递归合并，标量与数组整体替换；字段缺省表示沿用低层，null 仅在 schema 明确允许时有效，不作为删除指令。
 
@@ -364,7 +357,7 @@ CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card �
 1. 读取每个配置来源时检查结构、未知卡片 ID、未知字段、键重复、类型及当前可判定的范围。配置片段的对象递归允许缺省字段，只检查已提供的内容，不在本层填默认值或执行跨字段校验；错误即报告，不被更高层覆盖掩盖。
 2. 合并选中卡片的媒体设置，验证格式、主题、语言等能力；再计算默认参数、合并 params，执行完整 schema 和跨字段校验。缺失必填值在此时报错。
 3. batch 在取数前校验所有 job 和输出目标。serve 在开始监听前校验 runtime 和卡片默认配置片段，卡片必填参数允许由请求补齐；每个请求再检查覆盖后的完整值。各次生成使用独立的不可变配置。
-4. 错误包含字段路径、来源和原因，例如 `COOLP__RUNTIME__SERVER__PORT: expected integer 1..65535` 或 `coolp.yaml: cards.snake.params.subject: required`；所有来源信息保留到规范化完成，凭证值脱敏。
+4. 错误包含字段路径、来源和原因，例如 `COOLP__RUNTIME__SERVER__PORT: expected integer 1..65535` 或 `coolp.yaml: cards["activity/snake"].params.subject: required`；所有来源信息保留到规范化完成，凭证值脱敏。
 
 `coolp render <id> --dry-run` 与 `coolp batch --config coolp.yaml --dry-run` 输出最终配置、字段来源和目标文件，完成同样的校验，不调用数据源或编码器。serve 首期在启动时读取文件和环境，不自动热更新配置。
 
@@ -405,7 +398,7 @@ $:
           image: docker.cnb.cool/elonzh/cool-profile:latest
           args: [render]
           settings:
-            card: snake
+            card: activity/snake
             source: cnb
             subject: elonzh
             format: svg
@@ -428,14 +421,12 @@ apps/gallery 是 Vite + TypeScript 应用，从构建时生成的卡片目录读
 
 ```json
 {
-  "snake": {
-    "name": { "zh-CN": "贪吃蛇", "en": "Snake" },
-    "cases": [{ "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } }]
-  }
+  "name": { "zh-CN": "贪吃蛇", "en": "Snake" },
+  "cases": [{ "pattern": "cnb-*", "params": { "source": "cnb", "subject": "elonzh" } }]
 }
 ```
 
-pattern 匹配 examples 下的媒体文件，文件名以 `-<theme>.<locale>.<format>` 结束。构建校验卡片归属、请求参数和媒体组合，并生成静态首帧预览；没有 manifest 的卡片仍按 ID 和 schema 展示。样张与请求元信息随包维护，新增包会自动进入画廊。
+pattern 匹配 examples 下的媒体文件，文件名以 `-<theme>.<locale>.<format>` 结束。构建从包目录取得所属卡片，校验请求参数和媒体组合，并生成静态首帧预览；没有 manifest 的卡片仍按 ID 和 schema 展示。样张与请求元信息随包维护，新增包会自动进入画廊。
 
 画廊产物写入 apps/coolp/assets/gallery，随应用镜像分发，由 server 根路径交付。用户选择样张、编辑参数、切换主题和媒体语言后，可生成图片、下载或复制等义的 CLI、URL、coolp.json。空参数交由服务配置和卡片默认值补齐。界面语言独立于媒体语言，默认均为中文。
 
@@ -480,13 +471,13 @@ pnpm hooks:install
 pnpm check
 pnpm cards:discover
 pnpm build
-pnpm coolp render stats --source cnb --subject elonzh --output stats.svg
+pnpm coolp render profile/stats --source cnb --subject elonzh --output stats.svg
 pnpm sync:remotes
 ```
 
 格式及风格检查交给提交钩子，修复后检查差异、重新暂存再提交。功能验证覆盖注册发现、配置覆盖与类型转换、CLI/URL 请求一致性、数据语义、确定性模拟、文字与图形边界及媒体交付。测试针对行为风险，不为简单配置堆叠实现镜像式断言。
 
-pnpm cards:discover 校验 cards/* 的实际导出并生成应用注册表 generated/cards.ts、画廊目录 generated/card-catalog.ts 和样张首帧。generated/ 不提交到 Git，CI 检查会重新生成。
+pnpm cards:discover 校验 cards/** 的实际导出并生成应用注册表 generated/cards.ts、画廊目录 generated/card-catalog.ts 和样张首帧。generated/ 不提交到 Git，CI 检查会重新生成。
 
 pnpm build 依次执行卡片发现、画廊构建和 CLI bundle，画廊写入 apps/coolp/assets/gallery，CLI 写入 apps/coolp/dist/coolp.mjs；该文件可直接通过 Node 或其 shebang 运行。开发时 pnpm coolp 执行 CLI TypeScript 入口，pnpm gallery:dev 启动画廊并将 /v1 请求代理到本地 coolp server。完整检查在测试前构建，CLI 集成测试执行真实 bundle，HTTP 测试使用本地 API 服务，不依赖外部令牌；真实样张保存在各卡片包的 examples/。
 

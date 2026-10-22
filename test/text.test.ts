@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { expect, it } from 'vitest';
 import { createTextRenderer } from '../packages/graphics/src/index.js';
-import { wrapDescription } from '../cards/stats/src/layout.js';
+import { wrapDescription } from '../packages/graphics/src/card-frame.js';
 
 const font = await readFile('apps/coolp/assets/fonts/NotoSansSC.ttf');
 const emoji = await readFile('apps/coolp/assets/fonts/NotoEmoji.ttf');

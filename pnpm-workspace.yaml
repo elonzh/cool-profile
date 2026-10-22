@@ -1,7 +1,7 @@
 packages:
   - apps/*
   - packages/*
-  - cards/*
+  - cards/**
 
 allowBuilds:
   esbuild: true

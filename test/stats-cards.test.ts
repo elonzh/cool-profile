@@ -8,8 +8,8 @@ import { languageColor } from '../packages/data/src/language-colors.js';
 import { createTextRenderer } from '../packages/graphics/src/index.js';
 import { encodeGraphic } from '../packages/graphics/src/encode.js';
 import { loadConfiguration, resolveCardRequest } from '../apps/coolp/src/config/index.js';
-import { cards } from '../cards/stats/src/index.js';
-import { wrapDescription } from '../cards/stats/src/layout.js';
+import { cards } from '../generated/cards.js';
+import { wrapDescription } from '../packages/graphics/src/card-frame.js';
 import {
   fixtureApi,
   fixtureEnvironment,
@@ -128,7 +128,7 @@ it.each(['github', 'cnb'])(
       languages: [],
     });
     const draw = await registry
-      .get('languages')!
+      .get('profile/languages')!
       .prepare(
         { data: client(fetcher), now: fixedNow, signal: new AbortController().signal },
         { source, subject: 'author', 'include-forks': false, limit: 10 },
@@ -182,18 +182,24 @@ it('validates full repository paths and CNB metric compatibility before fetching
       'owner//repo',
       'owner/%2e%2e',
     ]) {
-      expect(() => request('repo', { source, subject })).toThrow('subject');
+      expect(() => request('repository/overview', { source, subject })).toThrow('subject');
       await expect(client().read({ kind: 'repository', source, subject })).rejects.toMatchObject({
         kind: 'input',
       });
     }
   }
-  expect(() => request('repo', { source: 'github', subject: 'a/b/c' })).toThrow('owner/repository');
-  expect(request('repo', { source: 'cnb', subject: 'a/b/c' }).params.subject).toBe('a/b/c');
-  expect(() => request('languages', { source: 'cnb', subject: 'author', metric: 'bytes' })).toThrow(
-    'metric',
+  expect(() => request('repository/overview', { source: 'github', subject: 'a/b/c' })).toThrow(
+    'owner/repository',
   );
-  expect(() => request('languages', { source: 'github', subject: 'author', limit: 11 })).toThrow();
+  expect(request('repository/overview', { source: 'cnb', subject: 'a/b/c' }).params.subject).toBe(
+    'a/b/c',
+  );
+  expect(() =>
+    request('profile/languages', { source: 'cnb', subject: 'author', metric: 'bytes' }),
+  ).toThrow('metric');
+  expect(() =>
+    request('profile/languages', { source: 'github', subject: 'author', limit: 11 }),
+  ).toThrow();
 });
 
 it('limits all provider HTTP requests, reuses cached requests and releases failed slots', async () => {
@@ -245,11 +251,11 @@ it('limits all provider HTTP requests, reuses cached requests and releases faile
 it('groups overflowing language rows while preserving totals and renders every language and theme', async () => {
   const configuration = await loadConfiguration(registry, { environment: {} });
   const data = client();
-  for (const id of ['languages', 'repo']) {
+  for (const id of ['profile/languages', 'repository/overview']) {
     const card = registry.get(id)!;
     for (const source of ['github', 'cnb']) {
       const subject =
-        id === 'repo'
+        id === 'repository/overview'
           ? source === 'github'
             ? 'author/project'
             : 'author/group/project'
@@ -261,7 +267,7 @@ it('groups overflowing language rows while preserving totals and renders every l
             params: {
               source,
               subject,
-              ...(id === 'languages' ? { limit: 1, 'include-forks': true } : {}),
+              ...(id === 'profile/languages' ? { limit: 1, 'include-forks': true } : {}),
             },
           },
         ],
@@ -276,14 +282,14 @@ it('groups overflowing language rows while preserving totals and renders every l
           expect(graphic.svg).not.toMatch(/NaN|Infinity|<text/);
           expect(graphic.svg).toContain(
             locale === 'zh-CN'
-              ? id === 'repo'
+              ? id === 'repository/overview'
                 ? '仓库'
                 : '语言分布'
-              : id === 'repo'
+              : id === 'repository/overview'
                 ? 'Repository'
                 : 'Languages',
           );
-          if (id === 'languages') {
+          if (id === 'profile/languages') {
             expect(graphic.svg).toContain(locale === 'zh-CN' ? '其他语言' : 'Other languages');
             expect(graphic.svg).toContain('TypeScript: ' + (source === 'github' ? 300 : 1));
           }

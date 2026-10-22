@@ -1,0 +1,22 @@
+{
+  "name": {
+    "zh-CN": "个人统计",
+    "en": "Profile stats"
+  },
+  "cases": [
+    {
+      "pattern": "cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh"
+      }
+    },
+    {
+      "pattern": "github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh"
+      }
+    }
+  ]
+}
