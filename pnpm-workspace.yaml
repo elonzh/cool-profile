@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - cards/*
 
 catalog:
   '@types/node': 24.19.2
