@@ -56,9 +56,13 @@ export interface Repository {
 
 export interface DataCapabilities {
   activity: { query: Resource & TimeWindow; data: Activity };
-  'profile-stats': { query: Resource; data: ProfileStats };
+  'profile-stats': { query: Resource & TimeWindow; data: ProfileStats };
   languages: {
-    query: Resource & { metric?: 'bytes' | 'repositories'; 'include-forks'?: boolean };
+    query: Resource & {
+      metric?: 'bytes' | 'repositories';
+      'include-forks'?: boolean;
+      'exclude-repo'?: string[];
+    };
     data: LanguageBreakdown;
   };
   repository: { query: Resource; data: Repository };

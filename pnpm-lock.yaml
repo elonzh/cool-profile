@@ -172,6 +172,21 @@ importers:
         specifier: 'catalog:'
         version: 4.6.7
 
+  cards/profile/radar:
+    dependencies:
+      '@cool-profile/card-kit':
+        specifier: workspace:*
+        version: link:../../../packages/card-kit
+      '@cool-profile/data':
+        specifier: workspace:*
+        version: link:../../../packages/data
+      '@cool-profile/graphics':
+        specifier: workspace:*
+        version: link:../../../packages/graphics
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.7
+
   cards/profile/stats:
     dependencies:
       '@cool-profile/card-kit':

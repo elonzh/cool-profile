@@ -9,3 +9,4 @@ export type {
   ValidationIssue,
 } from './card.js';
 export { ConfigurationError, issueMessage, parseSchema, validatePatch } from './schema.js';
+export { appearanceParams, surfaceParams, paint } from './appearance.js';

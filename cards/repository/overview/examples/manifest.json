@@ -17,6 +17,22 @@
         "source": "github",
         "subject": "Platane/snk"
       }
+    },
+    {
+      "pattern": "compact-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh/hermes-npc",
+        "layout": "compact"
+      }
+    },
+    {
+      "pattern": "compact-github-*",
+      "params": {
+        "source": "github",
+        "subject": "Platane/snk",
+        "layout": "compact"
+      }
     }
   ]
 }

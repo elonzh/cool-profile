@@ -17,6 +17,70 @@
         "source": "github",
         "subject": "elonzh"
       }
+    },
+    {
+      "pattern": "normal-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "normal"
+      }
+    },
+    {
+      "pattern": "normal-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "normal"
+      }
+    },
+    {
+      "pattern": "compact-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "compact"
+      }
+    },
+    {
+      "pattern": "compact-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "compact"
+      }
+    },
+    {
+      "pattern": "donut-vertical-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "donut-vertical"
+      }
+    },
+    {
+      "pattern": "donut-vertical-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "donut-vertical"
+      }
+    },
+    {
+      "pattern": "pie-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "pie"
+      }
+    },
+    {
+      "pattern": "pie-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "pie"
+      }
     }
   ]
 }

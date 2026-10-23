@@ -1,0 +1,22 @@
+{
+  "name": {
+    "zh-CN": "贡献雷达",
+    "en": "Contribution radar"
+  },
+  "cases": [
+    {
+      "pattern": "cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh"
+      }
+    },
+    {
+      "pattern": "github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh"
+      }
+    }
+  ]
+}

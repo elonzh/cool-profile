@@ -29,7 +29,12 @@ export function drawShooter(
   const shipY = 216;
   const durationMs = params.duration * 1000;
   const battle = planBattle(grid.cells, grid.columns, params.strategy, ctx.media.seed, durationMs);
-  const targetIndices = new Map(battle.shots.map((shot, index) => [shot.cell.date, index]));
+  const targets = new Map(
+    grid.cells.map((cell) => [
+      cell.date,
+      battle.shots.filter((shot) => shot.cell.date === cell.date),
+    ]),
+  );
   const arcade = ctx.media.theme === 'arcade';
   const night = ctx.media.theme !== 'default';
   const nativeTheme = cardTheme(params.source, night ? 'dark' : 'default');
@@ -110,11 +115,12 @@ export function drawShooter(
           .join('')
       : '';
     const enemies = grid.cells
-      .filter((cell) => cell.value > 0 && targetIndices.get(cell.date)! >= state.cleared)
+      .filter((cell) => cell.value > 0 && targets.get(cell.date)!.at(-1)!.hit > time)
       .map((cell) => {
         const x = originX + cell.column * unit;
         const y = 65 + cell.row * unit;
-        const fill = palette[cell.level]!;
+        const damage = targets.get(cell.date)!.filter((shot) => shot.hit <= time).length;
+        const fill = palette[Math.max(1, cell.level - damage)]!;
         const silhouette = arcade
           ? '<path d="M2 0h2v2h3V0h2v2h2v6H9V6H2v2H0V2h2z" fill="' + fill + '"/>'
           : '<rect width="11" height="10" rx="3" fill="' + fill + '"/>';
@@ -148,9 +154,9 @@ export function drawShooter(
       const cx = originX + state.shot.cell.column * unit + 5.5;
       const cy = 70 + state.shot.cell.row * unit;
       const progress = state.explosion;
-      for (let part = 0; part < 8; part++) {
-        const angle = (part * Math.PI) / 4;
-        const radius = 3 + progress * 11;
+      for (let part = 0; part < (state.shot.remainingHealth === 0 ? 12 : 4); part++) {
+        const angle = (part * Math.PI * 2) / (state.shot.remainingHealth === 0 ? 12 : 4);
+        const radius = 3 + progress * (state.shot.remainingHealth === 0 ? 16 : 5);
         effects +=
           '<circle cx="' +
           (cx + Math.cos(angle) * radius) +
@@ -176,7 +182,7 @@ export function drawShooter(
       (7 + flame) +
       'l3-' +
       flame +
-      'z" fill="#ff9e42"/><path d="M0-11L-10 8l7-2 3-4 3 4 7 2z" fill="' +
+      'z" fill="#ff9e42"/><path d="M-2-14h4v10l4 5v-5h3v8l5 6v3H5L0 9l-5 4h-9v-3l5-6v-8h3v5l4-5z" fill="' +
       theme.accent +
       '"/><path d="M0-5l-2 7h4z" fill="' +
       theme.background +

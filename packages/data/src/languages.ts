@@ -15,7 +15,7 @@ export async function loadLanguages(
     throw new DataError('CNB supports the repositories language metric', 'input');
   }
   const repos = (await publicRepos(http, query.subject)).filter(
-    (repo) => query['include-forks'] || !repo.fork,
+    (repo) => (query['include-forks'] || !repo.fork) && !query['exclude-repo']?.includes(repo.path),
   );
   const totals = new Map<string, { name: string; value: number; color: string }>();
   const add = (name: string, value: number, color: string) => {

@@ -23,6 +23,6 @@ export function cardTheme(source: 'github' | 'cnb', theme: string) {
     border: dark ? '#30363d' : '#d1d9e0',
     text: dark ? '#e6edf3' : '#1f2328',
     muted: dark ? '#9198a1' : '#59636e',
-    accent: native[source].accent[dark ? 1 : 0],
+    accent: String(native[source].accent[dark ? 1 : 0]),
   };
 }

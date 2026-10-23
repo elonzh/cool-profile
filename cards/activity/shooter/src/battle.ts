@@ -3,6 +3,7 @@ import type { CalendarCell } from '@cool-profile/graphics';
 export type Strategy = 'column' | 'row' | 'random';
 export interface Shot {
   cell: CalendarCell;
+  remainingHealth: number;
   fromColumn: number;
   start: number;
   aim: number;
@@ -54,10 +55,15 @@ export function planBattle(
   seed: number,
   durationMs: number,
 ) {
-  const ordered = targetOrder(cells, strategy, seed);
+  const ordered = targetOrder(cells, strategy, seed).flatMap((cell) =>
+    Array.from({ length: Math.max(1, cell.level) }, (_, hit) => ({
+      cell,
+      remainingHealth: Math.max(1, cell.level) - hit - 1,
+    })),
+  );
   const center = (columns - 1) / 2;
   let fromColumn = center;
-  const weights = ordered.map((cell) => {
+  const weights = ordered.map(({ cell }) => {
     const movement = 0.15 + (Math.abs(cell.column - fromColumn) / Math.max(1, columns)) * 2;
     fromColumn = cell.column;
     return { movement, flight: 0.3 + (7 - cell.row) * 0.035, explosion: 0.18 };
@@ -74,19 +80,21 @@ export function planBattle(
   let cursor = 0;
   fromColumn = center;
   const scores = [0];
-  const shots: Shot[] = ordered.map((cell, index) => {
+  const clears = [0];
+  const shots: Shot[] = ordered.map(({ cell, remainingHealth }, index) => {
     const weight = weights[index]!;
     const start = cursor;
     const aim = start + weight.movement * scale;
     const hit = aim + weight.flight * scale;
     const end = hit + weight.explosion * scale;
-    const shot = { cell, fromColumn, start, aim, hit, end };
+    const shot = { cell, remainingHealth, fromColumn, start, aim, hit, end };
     cursor = end;
     fromColumn = cell.column;
-    scores.push(scores.at(-1)! + cell.value);
+    scores.push(scores.at(-1)! + (remainingHealth === 0 ? cell.value : 0));
+    clears.push(clears.at(-1)! + Number(remainingHealth === 0));
     return shot;
   });
-  return { shots, scores, center, durationMs, battleEnd: cursor };
+  return { shots, scores, clears, center, durationMs, battleEnd: cursor };
 }
 
 const smooth = (value: number) => value * value * (3 - 2 * value);
@@ -109,12 +117,13 @@ export function battleFrame(battle: ReturnType<typeof planBattle>, time: number)
     );
     column = last + (battle.center - last) * smooth(returning);
   }
-  const cleared = shot ? index + Number(time >= shot.hit) : battle.shots.length;
+  const hits = shot ? index + Number(time >= shot.hit) : battle.shots.length;
   return {
     column,
     shot,
-    cleared,
-    collected: battle.scores[cleared]!,
+    hits,
+    cleared: battle.clears[hits]!,
+    collected: battle.scores[hits]!,
     bullet:
       shot && time >= shot.aim && time < shot.hit
         ? (time - shot.aim) / (shot.hit - shot.aim)

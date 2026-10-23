@@ -198,7 +198,7 @@ it('validates full repository paths and CNB metric compatibility before fetching
     request('profile/languages', { source: 'cnb', subject: 'author', metric: 'bytes' }),
   ).toThrow('metric');
   expect(() =>
-    request('profile/languages', { source: 'github', subject: 'author', limit: 11 }),
+    request('profile/languages', { source: 'github', subject: 'author', limit: 21 }),
   ).toThrow();
 });
 

@@ -18,6 +18,9 @@ export function drawSnake(
     subject: string;
     fps: number;
     duration: number;
+    colors?: string[] | undefined;
+    'snake-color'?: string | undefined;
+    'background-color'?: string | undefined;
   },
 ) {
   const grid = activityGrid(activity);
@@ -34,7 +37,17 @@ export function drawSnake(
   const lastStep = route.poses.length - 1;
   const durationMs = params.duration * 1000;
   const theme = cardTheme(params.source, ctx.media.theme);
-  const palette = calendarPalette(params.source, ctx.media.theme === 'dark');
+  if (params['snake-color']) theme.accent = params['snake-color'];
+  else if (ctx.media.theme === 'ocean') theme.accent = '#0575a3';
+  else if (ctx.media.theme === 'grey') theme.accent = '#444444';
+  if (params['background-color']) theme.background = params['background-color'];
+  const palette =
+    params.colors ??
+    (ctx.media.theme === 'ocean'
+      ? ['#edf7fc', '#b5e7f3', '#76cadd', '#319cbc', '#126883']
+      : ctx.media.theme === 'grey'
+        ? ['#eeeeee', '#cccccc', '#999999', '#666666', '#333333']
+        : calendarPalette(params.source, ctx.media.theme === 'dark'));
   const chinese = ctx.media.locale === 'zh-CN';
   const title = chinese ? '贪吃蛇' : 'Activity snake';
   const number = new Intl.NumberFormat(ctx.media.locale, { maximumFractionDigits: 1 });

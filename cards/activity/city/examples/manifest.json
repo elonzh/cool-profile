@@ -17,6 +17,22 @@
         "source": "github",
         "subject": "elonzh"
       }
+    },
+    {
+      "pattern": "calendar-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "calendar"
+      }
+    },
+    {
+      "pattern": "calendar-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "calendar"
+      }
     }
   ]
 }

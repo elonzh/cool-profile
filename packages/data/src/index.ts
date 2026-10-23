@@ -54,7 +54,7 @@ export function createDataClient(options: {
       const window =
         query.kind === 'activity' || query.kind === 'profile-stats'
           ? calendarWindow(
-              query.kind === 'activity' ? (query as DataRequest<'activity'>) : {},
+              query as DataRequest<'activity'>,
               collectedAt,
               query.source === 'cnb' ? 'Asia/Shanghai' : 'UTC',
             )

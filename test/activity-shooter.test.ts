@@ -43,16 +43,19 @@ it('clears every active day once without shooting through a surviving enemy for 
 
 it('aims before firing, counts hits at impact time and returns the ship to its initial column', () => {
   const battle = planBattle(grid.cells, grid.columns, 'random', 42, 8000);
+  expect(battle.shots.length).toBeGreaterThan(grid.activeDays);
   for (const [index, shot] of battle.shots.entries()) {
     expect(shot.start).toBeLessThan(shot.aim);
     expect(shot.aim).toBeLessThan(shot.hit);
     expect(shot.hit).toBeLessThan(shot.end);
     const flying = battleFrame(battle, (shot.aim + shot.hit) / 2);
     expect(flying.column).toBe(shot.cell.column);
-    expect(flying.cleared).toBe(index);
+    expect(flying.hits).toBe(index);
+    expect(flying.cleared).toBe(battle.clears[index]);
     expect(flying.bullet).toBeCloseTo(0.5);
     const hit = battleFrame(battle, shot.hit);
-    expect(hit.cleared).toBe(index + 1);
+    expect(hit.hits).toBe(index + 1);
+    expect(hit.cleared).toBe(battle.clears[index + 1]);
     expect(hit.bullet).toBeUndefined();
     expect(hit.explosion).toBe(0);
   }

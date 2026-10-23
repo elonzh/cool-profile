@@ -10,7 +10,7 @@ Cool Profile 将持续变化的信息生成为可嵌入个人主页、README 和
 
 统一应用名为 `coolp`，包含 CLI 和 HTTP server。CNB 插件、GitHub Action 与服务部署共用应用和 OCI 镜像，通过子命令选择生成文件或启动服务。
 
-当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。`profile/stats`、`profile/languages`、`repository/overview` 提供中英文、明暗主题和 SVG/PNG 输出；`activity/snake` 提供原生、深色、彩虹主题和 SVG/GIF 动画。`activity/city` 已支持 SVG/PNG、五种主题与 SVG 生长动画；`activity/shooter` 已支持 GIF/WebP、三种策略和主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊提供六种效果的真实样张、参数编辑和实时生成。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
+当前已实现卡片协议、构建时发现、分层配置与来源诊断、可执行 coolp、HTTP 图片服务，以及 GitHub/CNB 的统计和日历数据适配器。`profile/stats`、`profile/languages`、`profile/radar`、`repository/overview` 提供中英文、67 个主题和 SVG/PNG 输出；`activity/snake` 提供五种主题和 SVG/GIF 动画。`activity/city` 支持组合图与独立日历、十一种主题、SVG/PNG 和 SVG 生长动画；`activity/shooter` 支持 GIF/WebP、三种策略和三种主题。应用通过统一 Dockerfile、CNB 插件和 GitHub Action 分发，画廊提供七张卡片的真实样张、参数编辑和实时生成。本文集中维护架构、卡片协议、配置、命令和 URL。README.md 默认中文，README.en.md 提供内容一致的英文版本。
 
 ## 职责与依赖
 
@@ -94,8 +94,8 @@ interface CardDefinition<S extends z.ZodObject, Data> {
 
 - formats 第一项为默认格式；themes 包含 default，locales 包含 zh-CN，首期卡片同时提供 en。
 - params 定义卡片参数的类型、必填项、范围和说明；根字段使用小写 kebab-case。format、theme、locale、seed、params、tokens 及 CLI 控制选项是保留名，不能重复声明。
-- defaults 只提供卡片参数的默认值，可根据已确定的媒体格式选择，例如 3D 卡片在 SVG 下默认动画、PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
-- validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。ValidationContext 提供应用传入的 now；三个日历卡复用数据包的年份与时区规则，未来年份在 CLI、URL 和 dry-run 中都会被拒绝。
+- defaults 只提供卡片参数的默认值，可根据已确定的媒体格式与主题选择，例如 3D 卡片在 SVG 的默认、南北季节主题下默认动画，PNG 下默认静态。schema 本身不使用 default、coerce 或 transform，避免在覆盖完成前补值或改变语义。
+- validate 在完整参数解析后检查跨字段规则，例如 PNG 不接受 animate=true。ValidationContext 提供应用传入的 now；日历卡、个人统计与独立雷达复用数据包的年份与时区规则，未来年份在 CLI、URL 和 dry-run 中都会被拒绝。
 - LoadContext 提供受控 DataClient、AbortSignal 和本次请求的时间基准。RenderContext 提供规范化媒体设置和 text 排版函数，图元由图形包提供；绘图上下文没有数据客户端。应用持有共享缓存，每次生成创建独立上下文与配置，卡片定义不保存请求状态。
 
 `defineCard` 返回不含 ID 的 `CardModule`，构建时由发现步骤绑定路径，得到带 ID 的 `Card`。请求调用 `prepare` 时先获取快照，再得到保留类型信息的绘图函数。应用记录本次使用的快照版本及权限作用域，在绘图与编码之前查询媒体缓存。缓存仅属于应用实例；共享取数任务使用独立超时，某个 HTTP 客户端取消请求不取消其他消费者。
@@ -205,22 +205,24 @@ CLI 省略 format、URL 省略扩展名时采用同一默认格式。URL 在最�
 | ----------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------- | --------------- |
 | `activity/snake`                                            | 活跃贪吃蛇                   | [Platane/snk](https://github.com/Platane/snk)                                         | svg / svg、gif  |
 | `activity/shooter`                                          | 太空射击                     | [gh-space-shooter](https://github.com/czl9707/gh-space-shooter)                       | gif / gif、webp |
-| `activity/city`                                             | 3D 活跃城市                  | [github-profile-3d-contrib](https://github.com/yoshi389111/github-profile-3d-contrib) | svg / svg、png  |
+| `activity/city`、`profile/radar`                            | 3D 活跃城市、贡献雷达        | [github-profile-3d-contrib](https://github.com/yoshi389111/github-profile-3d-contrib) | svg / svg、png  |
 | `profile/stats`、`profile/languages`、`repository/overview` | 个人统计、语言分布、仓库概览 | [github-stats-extended](https://github.com/stats-organization/github-stats-extended)  | svg / svg、png  |
 
-参考用于理解算法与效果，代码重新实现。四类效果同时支持 GitHub/CNB，统计卡使用来源实际提供的指标。统计类首期范围为 `profile/stats`、`profile/languages`、`repository/overview`，不包含 Gist 与 WakaTime。
+参考用于理解算法与效果，代码重新实现。所有卡片同时支持 GitHub/CNB，统计卡使用来源实际提供的指标。github-stats-extended 的首期复现范围为 `profile/stats`、`profile/languages`、`repository/overview`，不包含 Gist 与 WakaTime；`profile/radar` 是 3D 活跃日历的独立配套图。
 
-日历卡缺省读取最近 365 天，year 指定来源时区下的日历年份。累计指标保留原始统计范围。太空射击 strategy 支持 column、row、random，默认 random；fps 默认 40。3D 的 animate 在 SVG 下默认 true、PNG 下默认 false。
+日历卡、个人统计和独立雷达缺省读取最近 365 天，year 指定来源时区下的日历年份；选择当年时截止到当天，不接受未来年份。累计指标保留原始统计范围。太空射击 strategy 支持 column、row、random，默认 random；fps 默认 40。3D 的 default、season、season-north、season-south 在 SVG 下默认启用生长动画，其余主题与 PNG 默认静态；SVG 可显式切换 animate。
 
-`activity/shooter` 的 duration 默认 20 秒，允许 8..24；fps 允许 5..40。模拟按时间推进，与采样帧率独立。column 按列逐个清除，row 从底行向上清除，random 使用 seed 随机选列；每次命中该列最下方的存活目标。先瞄准、发射，再在命中时消除，累计原始活跃分或贡献数，清除后飞船回到起点。
+`activity/shooter` 的 duration 默认 20 秒，允许 8..24；fps 允许 5..40。模拟按时间推进，与采样帧率独立。column 按列逐个清除，row 从底行向上清除，random 使用 seed 随机选列；每次命中该列最下方的存活目标。先瞄准、发射，目标耐久等于其活跃等级（1..4）；命中后降低耐久与色阶，最后一次命中才摧毁、爆炸并累计该日完整原始值。清除后飞船回到起点。
 
-`activity/city` 提供 default、dark、season、rainbow、blocks 主题。日历按周与星期投影，楼高对原始数值做对数缩放，积木主题量化高度并绘制凸点；夜景绘制窗灯，季节配色跟随每个日期的月份。零活跃日保留地块，中英文月份按实际字宽避让。SVG 可使用 animate=false 输出静态图；PNG 与 animate=true 的组合在取数前报错。
+`activity/city` 的 layout=dashboard 为默认布局，输出 1280×850 组合图：3D 日历、贡献雷达、语言圆环、活跃总量及星标/Fork。layout=calendar 输出 1280×740 独立日历。雷达与日历使用同一年份窗口；语言与星标/Fork 是当前公开 Owner 仓库统计，并在图中保留单位。GitHub 雷达包含提交、议题、合并请求、评审、贡献仓库；CNB 仅绘制接口提供的前三项。独立雷达使用 `profile/radar`，独立语言图使用 `profile/languages` 的 pie 或 donut 布局。
 
-`activity/snake` 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。
+城市主题为 default、dark、season、rainbow、blocks、season-north、season-south、night-view、night-green、night-rainbow、halloween。season 与 season-north 使用北半球月份，season-south 反转季节；night-view 使用深蓝楼体和暖色窗灯，night-green 使用绿色楼体，night-rainbow 按日期变化色相。blocks 使用四凸点屋顶、凸点投影、侧面阴影与逐层砖缝，楼高量化为砖层；零活跃日也保留积木底板。colors 可覆盖五级配色。SVG 的 animate 可关闭；PNG 的 animate 必须为 false。
 
-`profile/languages` 汇总公开 Owner 仓库，默认排除 Fork，可用 include-forks=true 纳入。GitHub 默认 metric=bytes，完整读取各仓库的语言字节数；CNB 默认 metric=repositories，按仓库主要语言计数。两端都支持 repositories，CNB 不接受 bytes。图中标明统计单位和已识别语言的仓库数，未识别语言的仓库不进入百分比分母。limit 默认 6、范围 1..10，超出部分合并为“其他语言”，总量保持不变。GitHub 语言颜色来自随应用分发的 Linguist 色表，CNB 优先使用接口颜色。
+`activity/snake` 的 fps 默认 20，可设为 5..40；duration 为一轮秒数，默认 12，可设为 4..30。路径以矩形闭合环为基础，捷径保持头尾在环上的顺序，按前进方向选择下一个活跃格，吃完后补齐完整身体姿态再循环。每个活跃日只消除一次，不把活跃分换算成贡献数。SVG 与栅格动画使用同一路径和消除时刻。提供 default、dark、rainbow、ocean、grey 主题；snake-color、colors（五项）、background-color 分别覆盖蛇、日历和背景颜色。
 
-`repository/overview` 的 subject 为完整仓库路径：GitHub 使用 owner/repository，CNB 允许多层组织路径。卡片仅展示公开仓库，显示简介、主要语言、许可证、星标、Fork 和未关闭事项。GitHub 的 open_issues_count 包含合并请求，CNB 将 open_issue_count 与 open_pull_request_count 相加，图中统一标为“未关闭议题与合并请求”。空简介、未识别语言和未声明许可证分别显示对应状态。
+`profile/languages` 汇总公开 Owner 仓库，默认排除 Fork，可用 include-forks=true 纳入。GitHub 默认 metric=bytes，完整读取各仓库的语言字节数；CNB 默认 metric=repositories，按仓库主要语言计数。两端都支持 repositories，CNB 不接受 bytes。图中标明统计单位和已识别语言的仓库数，未识别语言的仓库不进入百分比分母。limit 默认 6、范围 1..20，超出部分合并为“其他语言”，总量保持不变。GitHub 语言颜色来自随应用分发的 Linguist 色表，CNB 优先使用接口颜色。
+
+`repository/overview` 的 subject 为完整仓库路径：GitHub 使用 owner/repository，CNB 允许多层组织路径。卡片仅展示公开仓库，显示简介、主要语言、许可证、星标、Fork 和未关闭事项。GitHub 的 open_issues_count 包含合并请求，CNB 将 open_issue_count 与 open_pull_request_count 相加，图中统一标为“未关闭议题与合并请求”。有值时显示简介、语言与许可证。show-owner 控制完整路径标题，description-lines 为 1..5，layout=compact 收紧留白；数值与图标沿同一基线排布。
 
 ```sh
 coolp render profile/languages --source github --subject elonzh --metric repositories --include-forks true --limit 8 --output languages.svg
@@ -235,6 +237,35 @@ coolp render repository/overview --source cnb --subject elonzh/cool-profile --th
 ```
 
 图形包提供基础图元、时间轴和编码，各卡片维护自己的布局、模拟及文案。CNB 默认活跃色阶与徽章绿、GitHub 原生色阶，以及季节、夜景、彩虹、积木和游戏主题随效果实现。字体随镜像分发，每类效果以真实数据验收中英文与多主题样张。
+
+### 展示能力与视觉约定
+
+首期以这些参考版本为效果基线，Gist、WakaTime 保持排除：
+
+| 参考                                                                                                                                | 效果范围                                                                                 | 本项目实现                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [snk](https://github.com/Platane/snk/tree/a041d6c27ba561a39f5be9c26a784812765e434b)                                                 | SVG/GIF、明暗、自定义蛇/格子/背景色                                                      | `activity/snake`，增加彩虹、海洋和灰阶预设                                                |
+| [gh-space-shooter](https://github.com/czl9707/gh-space-shooter/tree/b24c9792454d1a2e0139ccf72840424e1f83c3f2)                       | GIF/WebP、三种策略、多次命中、爆炸、飞船归位                                             | `activity/shooter`，保留明暗和街机主题，轨迹与 fps 独立                                   |
+| [github-profile-3d-contrib](https://github.com/yoshi389111/github-profile-3d-contrib/tree/e235d118909be71eb7edb05482a3de4e76156df3) | 城市、积木、南北季节、夜景/绿色/彩虹、万圣节、雷达、语言圆环、组合/独立图、静态/生长动画 | `activity/city`、`profile/radar`、`profile/languages`；组合数据各自保留统计口径           |
+| [github-stats-extended](https://github.com/stats-organization/github-stats-extended/tree/d130fe21d880fef33060082dffbfaa1a15445b37)  | stats 列表/等级环、五种语言图、repo pin、主题和外观参数                                  | `profile/stats`、`profile/languages`、`repository/overview`；另提供统计双列与仓库紧凑布局 |
+
+`profile/stats`、`profile/languages`、`profile/radar`、`repository/overview` 共用 67 个主题 ID。参考主题色表以静态 JSON 数据分发，来源版本和 MIT 许可放在 `packages/graphics/assets/THEMES-LICENSE`；绘制、布局、协议和数据代码独立实现。default/dark 使用来源原生底色与色阶，CNB 默认浅色主题的强调色按下述可读性约定调整。颜色覆盖只接受十六进制或 transparent，主题中的多色背景由 SVG linearGradient 绘制。
+
+这四张卡片共同支持表面参数 title、width（300..1200）、hide-title、hide-border、border-radius（0..40）、title-color、text-color、background-color、border-color；额外外观参数按各卡片 schema 提供：
+
+| 卡片                                   | 额外外观参数                                                                             |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `profile/stats`、`repository/overview` | icon-color、line-height、show-icons、text-bold、number-format、number-precision、animate |
+| `profile/languages`                    | line-height、number-format、number-precision、animate                                    |
+| `profile/radar`                        | animate                                                                                  |
+
+line-height 范围为 22..48，number-format 支持 short/long，number-precision 为 0..2。这四张卡片的 animate 缺省关闭，仅 SVG 播放动画，PNG 使用完整静态状态；活动卡片的参数由各自 schema 定义。个人统计的 hide/show 选择已有指标，hide-rank 控制等级环，rank-icon 在字母与估算百分位之间切换，ring-color 覆盖环色。计算等级是应用基于公开计数的计算结果，缺失项不参与权重；图中标为“计算等级”，不表述为平台官方排名。
+
+语言图 layout 支持 normal、compact、donut、donut-vertical、pie。hide 在绘制前过滤语言，百分比分母使用过滤后总量；exclude-repo 在数据层聚合前排除完整仓库路径。hide-progress、hide-values、bar-background、stats-format 控制条形与数值。donut 布局在宽度低于 480px 时转为上下排列，donut-vertical 与 pie 始终上下排列；低于 440px 的图例使用单列。统计卡在宽度低于 440px 时把等级环放在指标下方，compact 布局的阈值为 560px；指标可用宽度不足 360px 时改为单列，300px 卡片以单列指标和下方等级环展示。
+
+卡片内容本身承担表达，图形由 SVG 图元与字体路径组成。3D 组合卡保持大尺度斜投影与留白，雷达放右上、语言放左下，统计摘要沿底部；统计与仓库卡使用无装饰色块的紧凑列表，共用 6px 默认圆角和 26px 水平内边距。标题为 18px，统计指标标签为 13px、数值为 14px，仓库指标为 12px，图标与数值按基线排布。配色保留 CNB 原生橙色活跃阶与蛇的身份徽章绿（#07b87d）；CNB 默认浅色统计主题的标题、等级环与功能图标使用深绿 #007a52，白底对比度约 5.38:1，正文仍使用深灰。GitHub 保留原生绿色阶；避免全卡重复品牌页脚。中文/英文共享几何结构和随应用分发的字体路径。
+
+每个包的 examples/manifest.json 维护实际请求；不同布局使用独立 case，主题和媒体语言从文件名识别。`pnpm examples:generate [card-id...]` 使用环境中的令牌与真实公开数据生成中英文样张，CLI、URL、插件和 Action 都消费同一 schema、布局与默认值。验收覆盖原始尺寸、README 缩小尺寸、300px 窄卡、两种语言和来源；数据、图形及传输一致性由有针对性的测试验证。
 
 ## 配置结构与下发
 
@@ -363,9 +394,9 @@ CNB settings 转为 PLUGIN_* 后，由 render 的输入适配器读取，card �
 
 ## 数据、媒体与 server
 
-数据按日历、资料、统计、仓库等能力组织，卡片按需组合快照。资源由来源、服务地址、来源内 ID 标识；数据请求缓存键包含能力、资源、查询与权限作用域。快照保留采集时间、刷新建议、缺失值、单位和统计范围。
+数据按日历、资料、统计、仓库等能力组织，卡片按需组合快照。资源由来源、服务地址、来源内 ID 标识；数据请求缓存键包含能力、资源、查询与权限作用域。快照保留采集时间、版本、权限作用域，以及数据内的缺失值、单位和统计范围。
 
-时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。GitHub 日历按 UTC 日期、CNB 按 Asia/Shanghai 日期解析，统计卡的提交、议题和合并请求使用最近 365 天的平台计数；获赞汇总完整分页的公开 Owner 仓库，公开仓库数使用平台资料字段。CNB 活跃分与 GitHub 贡献数保留各自名称与等级语义。HTTP、响应结构或认证失败直接报错，不替换成零值。
+时间窗口显式解析，绘制和模拟使用已固定的数据、语言、主题、时间与随机种子，避免依赖机器时区及系统时间。GitHub 日历按 UTC 日期、CNB 按 Asia/Shanghai 日期解析。个人统计、独立雷达和城市组合图的时间指标与日历使用同一最近 365 天或显式 year 窗口：GitHub 读取提交、议题、合并请求、评审及贡献仓库的平台计数，CNB 汇总日历中的提交、议题与合并请求。CNB 不提供评审与贡献仓库计数，这两项保留缺失值，雷达省略相应轴；获赞和被 Fork 汇总完整分页的公开 Owner 仓库，公开仓库数使用平台资料字段。CNB 活跃分与 GitHub 贡献数保留各自名称与等级语义。HTTP、响应结构或认证失败直接报错，不替换成零值。
 
 每个 provider 的 concurrency 默认 4、范围 1..16，限制该来源共享 HTTP 客户端的并发请求；例如 runtime.providers.github.concurrency 或 COOLP__RUNTIME__PROVIDERS__GITHUB__CONCURRENCY。缓存命中不占请求槽，失败释放槽位。runtime.render-concurrency 独立限制绘制与编码，两者都只从运行配置下发，不允许 URL 覆盖。CNB 日历与用户统计使用 account-profile:r、account-engage:r；repo 还使用 repo-basic-info:r。GitHub 统计与日历需要令牌，公开仓库和语言 REST 接口支持无令牌访问。
 

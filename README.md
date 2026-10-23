@@ -28,6 +28,14 @@
 
 ![GitHub 深色仓库卡](cards/repository/overview/examples/github-dark.zh-CN.svg)
 
+语言卡提供条形、紧凑、横向圆环、纵向圆环和饼图，统计与仓库卡支持 67 套主题。3D 卡默认同时展示城市、雷达和语言图，也可单独生成。
+
+![ 独立贡献雷达](cards/profile/radar/examples/cnb-dark.zh-CN.svg)
+
+![紧凑语言图](cards/profile/languages/examples/compact-cnb-default.zh-CN.svg)
+
+![语言饼图](cards/profile/languages/examples/pie-github-radical.zh-CN.svg)
+
 ## 命令行
 
 使用镜像生成文件：
@@ -54,7 +62,8 @@ pnpm coolp render activity/city --source cnb --subject elonzh --format png --the
 pnpm coolp render activity/shooter --source github --subject elonzh --theme arcade --output shooter.gif
 pnpm coolp render profile/stats --source cnb --subject elonzh --output stats.svg
 pnpm coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
-pnpm coolp render profile/languages --source cnb --subject elonzh --output languages.svg
+pnpm coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --output languages.svg
+pnpm coolp render profile/radar --source cnb --subject elonzh --theme dark --output radar.svg
 pnpm coolp render repository/overview --source github --subject Platane/snk --theme dark --output repo.svg
 ```
 

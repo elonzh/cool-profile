@@ -29,6 +29,14 @@ animations, space shooters, 3D activity calendars, and statistics cards.
 
 ![GitHub dark repository card](cards/repository/overview/examples/github-dark.en.svg)
 
+Language cards offer bars, compact bars, horizontal and vertical donuts, and pies. Stats and repository cards support 67 themes. The 3D card combines the city, radar, and language chart, with standalone views available.
+
+![ Contribution radar](cards/profile/radar/examples/cnb-dark.en.svg)
+
+![Compact languages](cards/profile/languages/examples/compact-cnb-default.en.svg)
+
+![Language pie](cards/profile/languages/examples/pie-github-radical.en.svg)
+
 ## CLI
 
 Generate a file with the image:
@@ -55,7 +63,8 @@ pnpm coolp render activity/city --source cnb --subject elonzh --format png --the
 pnpm coolp render activity/shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
 pnpm coolp render profile/stats --source cnb --subject elonzh --locale en --output stats.svg
 pnpm coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
-pnpm coolp render profile/languages --source cnb --subject elonzh --locale en --output languages.svg
+pnpm coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --locale en --output languages.svg
+pnpm coolp render profile/radar --source cnb --subject elonzh --theme dark --locale en --output radar.svg
 pnpm coolp render repository/overview --source github --subject Platane/snk --theme dark --locale en --output repo.svg
 ```
 

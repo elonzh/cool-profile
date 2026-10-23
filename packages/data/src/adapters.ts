@@ -29,6 +29,8 @@ const ghContributionsSchema = z.object({
   totalCommitContributions: count,
   totalIssueContributions: count,
   totalPullRequestContributions: count,
+  totalPullRequestReviewContributions: count,
+  totalRepositoryContributions: count,
   contributionCalendar: z.object({
     colors: z.array(z.string()),
     weeks: z.array(z.object({ contributionDays: z.array(ghDaySchema) })),
@@ -43,6 +45,7 @@ async function githubContributions(http: SourceHttp, query: DataRequest<'activit
       user(login: $login) {
         contributionsCollection(from: $from, to: $to) {
           totalCommitContributions totalIssueContributions totalPullRequestContributions
+          totalPullRequestReviewContributions totalRepositoryContributions
           contributionCalendar {
             colors weeks { contributionDays { date contributionCount contributionLevel } }
           }
@@ -104,6 +107,8 @@ export async function loadProfileStats(
 ): Promise<ProfileStats> {
   http.requireToken();
   const calendarQuery = { ...query, kind: 'activity' as const };
+  const scope =
+    query.year !== undefined || query.from || query.to ? 'selected-period' : 'last-365-days';
   if (http.source === 'github') {
     const [user, repos, activity] = await Promise.all([
       http.get('/users/' + encodeURIComponent(query.subject)).then((raw) =>
@@ -132,9 +137,18 @@ export async function loadProfileStats(
           repos.reduce((sum, repo) => sum + repo.stars, 0),
           'public-owned-repositories',
         ),
-        metric('commits', collection.totalCommitContributions, 'last-365-days'),
-        metric('pull-requests', collection.totalPullRequestContributions, 'last-365-days'),
-        metric('issues', collection.totalIssueContributions, 'last-365-days'),
+        metric('commits', collection.totalCommitContributions, scope),
+        metric('pull-requests', collection.totalPullRequestContributions, scope),
+        metric('issues', collection.totalIssueContributions, scope),
+        metric('reviews', collection.totalPullRequestReviewContributions, scope),
+        metric('repositories-contributed', collection.totalRepositoryContributions, scope),
+        metric(
+          'forks',
+          repos.every((repo) => repo.forks !== null)
+            ? repos.reduce((sum, repo) => sum + (repo.forks ?? 0), 0)
+            : null,
+          'public-owned-repositories',
+        ),
         metric('followers', user.followers, 'current'),
         metric('public-repositories', user.public_repos, 'current'),
       ],
@@ -170,9 +184,18 @@ export async function loadProfileStats(
         repos.reduce((total, repo) => total + repo.stars, 0),
         'public-owned-repositories',
       ),
-      metric('commits', sum('commit_count'), 'last-365-days'),
-      metric('pull-requests', sum('pr_count'), 'last-365-days'),
-      metric('issues', sum('issues_count'), 'last-365-days'),
+      metric('commits', sum('commit_count'), scope),
+      metric('pull-requests', sum('pr_count'), scope),
+      metric('issues', sum('issues_count'), scope),
+      metric('reviews', null, scope),
+      metric('repositories-contributed', null, scope),
+      metric(
+        'forks',
+        repos.every((repo) => repo.forks !== null)
+          ? repos.reduce((sum, repo) => sum + (repo.forks ?? 0), 0)
+          : null,
+        'public-owned-repositories',
+      ),
       metric('followers', user.follower_count, 'current'),
       metric('public-repositories', user.public_repo_count, 'current'),
     ],

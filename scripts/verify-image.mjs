@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 const image = process.argv[2];
 const platform = process.argv[3];
 if (!image) throw new Error('Usage: node scripts/verify-image.mjs <image> [platform]');
-const repository = JSON.parse(
+const repositories = JSON.parse(
   readFileSync(new URL('../test/fixtures/repositories.json', import.meta.url), 'utf8'),
-).github;
+);
 
 async function verifyRuntime(fixture) {
   const { createServer } = await import('node:http');
@@ -20,18 +20,91 @@ async function verifyRuntime(fixture) {
   const { Resvg } = require('@resvg/resvg-js');
   const sharp = require('sharp');
   const exec = promisify(execFile);
-  const upstream = createServer((request, response) => {
+  const upstream = createServer(async (request, response) => {
     assert.equal(request.headers.authorization, 'Bearer fixture-token');
-    assert.equal(request.url, '/repos/author/project');
+    const url = new URL(request.url, 'http://fixture');
+    const cnb = url.pathname.startsWith('/cnb/');
+    const path = url.pathname.replace(/^\/(github|cnb)/, '');
+    let result;
+    if (path === '/repos/author/project' || path === '/author/project')
+      result = cnb ? fixture.cnb : fixture.github;
+    else if (path === '/users/author')
+      result = cnb
+        ? { username: 'author', nickname: '测试用户', public_repo_count: 1, follower_count: 2 }
+        : {
+            login: 'author',
+            name: '测试用户',
+            html_url: 'https://github.com/author',
+            public_repos: 1,
+            followers: 2,
+          };
+    else if (path === '/users/author/repos')
+      result =
+        url.searchParams.get('page') === '1'
+          ? [
+              cnb
+                ? {
+                    path: 'author/project',
+                    visibility_level: 'Public',
+                    star_count: 23,
+                    fork_count: 4,
+                    languages: { language: 'TypeScript', color: '#3178c6' },
+                  }
+                : {
+                    full_name: 'author/project',
+                    private: false,
+                    stargazers_count: 23,
+                    forks_count: 4,
+                    fork: false,
+                    language: 'TypeScript',
+                  },
+            ]
+          : [];
+    else if (path.endsWith('/languages')) result = { TypeScript: 200, CSS: 100 };
+    else if (path === '/users/author/calendar') result = {};
+    else if (path === '/graphql') {
+      const chunks = [];
+      for await (const chunk of request) chunks.push(chunk);
+      const { variables } = JSON.parse(Buffer.concat(chunks).toString());
+      const days = [];
+      for (
+        let timestamp = Date.parse(variables.from);
+        timestamp <= Date.parse(variables.to);
+        timestamp += 86400000
+      )
+        days.push({
+          date: new Date(timestamp).toISOString().slice(0, 10),
+          contributionCount: 0,
+          contributionLevel: 'NONE',
+        });
+      result = {
+        data: {
+          user: {
+            contributionsCollection: {
+              totalCommitContributions: 9,
+              totalIssueContributions: 3,
+              totalPullRequestContributions: 4,
+              totalPullRequestReviewContributions: 2,
+              totalRepositoryContributions: 1,
+              contributionCalendar: { colors: [], weeks: [{ contributionDays: days }] },
+            },
+          },
+        },
+      };
+    } else throw new Error('Unexpected fixture route: ' + path);
     response.setHeader('Content-Type', 'application/json');
-    response.end(JSON.stringify(fixture));
+    response.end(JSON.stringify(result));
   });
   upstream.listen(0, '127.0.0.1');
   await once(upstream, 'listening');
   const env = {
     ...process.env,
     GITHUB_TOKEN: 'fixture-token',
-    COOLP__RUNTIME__PROVIDERS__GITHUB__BASE_URL: 'http://127.0.0.1:' + upstream.address().port,
+    CNB_TOKEN: 'fixture-token',
+    COOLP__RUNTIME__PROVIDERS__GITHUB__BASE_URL:
+      'http://127.0.0.1:' + upstream.address().port + '/github',
+    COOLP__RUNTIME__PROVIDERS__CNB__BASE_URL:
+      'http://127.0.0.1:' + upstream.address().port + '/cnb',
   };
   const coolp = '/opt/cool-profile/dist/coolp.mjs';
   const options = { env, encoding: 'buffer', maxBuffer: 8 * 1024 * 1024 };
@@ -110,6 +183,89 @@ async function verifyRuntime(fixture) {
     assert.ok(response, 'Server did not start: ' + logs);
     assert.equal(response.status, 200);
     assert.deepEqual(Buffer.from(await response.arrayBuffer()), expected);
+    const cases = [
+      {
+        card: 'profile/stats',
+        params: {
+          source: 'github',
+          subject: 'author',
+          layout: 'compact',
+          show: ['reviews'],
+          hide: ['followers'],
+          width: 480,
+        },
+        theme: 'radical',
+      },
+      ...['normal', 'compact', 'donut', 'donut-vertical', 'pie'].map((layout) => ({
+        card: 'profile/languages',
+        params: { source: 'github', subject: 'author', layout, width: 420 },
+        theme: 'tokyonight',
+      })),
+      { card: 'profile/radar', params: { source: 'cnb', subject: 'author' }, theme: 'dark' },
+      {
+        card: 'activity/city',
+        params: { source: 'cnb', subject: 'author', animate: false },
+        theme: 'blocks',
+      },
+    ];
+    for (const item of cases) {
+      const parameters = JSON.stringify(item.params);
+      const cli = (
+        await exec(
+          process.execPath,
+          [
+            coolp,
+            'render',
+            item.card,
+            '--params',
+            parameters,
+            '--theme',
+            item.theme,
+            '--format',
+            'png',
+            '--output',
+            '-',
+          ],
+          options,
+        )
+      ).stdout;
+      const plugin = (
+        await exec(process.execPath, [coolp, 'render'], {
+          ...options,
+          env: {
+            ...env,
+            PLUGIN_CARD: item.card,
+            PLUGIN_PARAMS: parameters,
+            PLUGIN_THEME: item.theme,
+            PLUGIN_FORMAT: 'png',
+            PLUGIN_OUTPUT: '-',
+          },
+        })
+      ).stdout;
+      const action = (
+        await exec(process.execPath, ['/opt/cool-profile/action.mjs'], {
+          ...options,
+          env: {
+            ...env,
+            INPUT_CARD: item.card,
+            INPUT_PARAMS: parameters,
+            INPUT_THEME: item.theme,
+            INPUT_FORMAT: 'png',
+            INPUT_OUTPUT: '-',
+          },
+        })
+      ).stdout;
+      const response = await fetch(
+        'http://127.0.0.1:33000/v1/cards/' +
+          item.card +
+          '.png?' +
+          new URLSearchParams({ params: parameters, theme: item.theme }),
+      );
+      assert.equal(response.status, 200);
+      assert.deepEqual(Buffer.from(await response.arrayBuffer()), cli, item.card + ' HTTP');
+      assert.deepEqual(plugin, cli, item.card + ' plugin');
+      assert.deepEqual(action, cli, item.card + ' Action');
+    }
     const gallery = await fetch('http://127.0.0.1:33000/');
     assert.equal(gallery.status, 200);
     const html = await gallery.text();
@@ -168,7 +324,7 @@ execFileSync(
     '--input-type=module',
   ],
   {
-    input: '(' + verifyRuntime.toString() + ')(' + JSON.stringify(repository) + ');',
+    input: '(' + verifyRuntime.toString() + ')(' + JSON.stringify(repositories) + ');',
     stdio: ['pipe', 'inherit', 'inherit'],
     timeout: 60_000,
   },

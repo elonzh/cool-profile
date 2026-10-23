@@ -1,29 +1,4 @@
 import type { TextRenderer } from './types.js';
-import { cardTheme } from './theme.js';
-
-export function cardFrame(
-  source: 'github' | 'cnb',
-  themeName: string,
-  height: number,
-  text: TextRenderer,
-  title: string,
-  name: string,
-) {
-  const theme = cardTheme(source, themeName);
-  return {
-    theme,
-    content: [
-      `<rect x=".5" y=".5" width="619" height="${height - 1}" rx="20" fill="${theme.background}" stroke="${theme.border}"/>`,
-      `<rect x="28" y="29" width="4" height="36" rx="2" fill="${theme.accent}"/>`,
-      text(source.toUpperCase() + ' / ' + title, 44, 37, {
-        size: 12,
-        weight: 600,
-        fill: theme.muted,
-      }),
-      text(name, 44, 66, { size: 25, weight: 600, fill: theme.text, maxWidth: 535 }),
-    ],
-  };
-}
 
 export function wrapDescription(
   value: string,

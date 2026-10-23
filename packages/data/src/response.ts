@@ -20,6 +20,6 @@ export function decode<S extends z.ZodType>(
   return result.data;
 }
 
-export function metric(id: string, value: number, scope: string): Metric {
+export function metric(id: string, value: number | null, scope: string): Metric {
   return { id, value, scope, unit: 'count' };
 }

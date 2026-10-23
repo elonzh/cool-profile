@@ -11,6 +11,7 @@ const githubSummary = z.object({
   full_name: z.string(),
   private: z.boolean(),
   stargazers_count: count,
+  forks_count: count.optional(),
   fork: z.boolean(),
   language: z.string().nullable(),
 });
@@ -18,6 +19,7 @@ const cnbSummary = z.object({
   path: z.string(),
   visibility_level: z.string(),
   star_count: count,
+  fork_count: count.optional(),
   languages: cnbLanguage,
   forked_from_repo: z.object({ path: z.string() }).nullish(),
 });
@@ -25,6 +27,7 @@ const cnbSummary = z.object({
 interface PublicRepository {
   path: string;
   stars: number;
+  forks: number | null;
   fork: boolean;
   language: { name: string; color: string } | null;
 }
@@ -67,6 +70,7 @@ export async function publicRepos(http: SourceHttp, username: string): Promise<P
         ? decode(z.array(githubSummary), raw, http.source).map((repo) => ({
             path: repo.full_name,
             stars: repo.stargazers_count,
+            forks: repo.forks_count ?? null,
             public: !repo.private,
             fork: repo.fork,
             language: primaryLanguage(repo.language),
@@ -74,6 +78,7 @@ export async function publicRepos(http: SourceHttp, username: string): Promise<P
         : decode(z.array(cnbSummary), raw, http.source).map((repo) => ({
             path: repo.path,
             stars: repo.star_count,
+            forks: repo.fork_count ?? null,
             public: repo.visibility_level === 'Public',
             fork: !!repo.forked_from_repo,
             language: primaryLanguage(repo.languages.language, repo.languages.color),

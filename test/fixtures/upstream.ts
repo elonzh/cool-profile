@@ -4,7 +4,7 @@ import { dates } from '../../packages/data/src/window.js';
 export const fixedNow = new Date('2026-10-22T12:00:00Z');
 
 export function fixtureApi(url: URL, body?: string, revision = 1): unknown {
-  const cnb = url.pathname.startsWith('/cnb/');
+  const cnb = url.pathname.startsWith('/cnb/') || url.hostname === 'api.cnb.cool';
   const path = url.pathname.replace(/^\/(?:cnb|github)/, '');
   if (path === '/graphql') {
     const input = JSON.parse(body ?? '{}') as { variables: { from: string; to: string } };
@@ -16,6 +16,8 @@ export function fixtureApi(url: URL, body?: string, revision = 1): unknown {
             totalCommitContributions: revision * 9,
             totalIssueContributions: 3,
             totalPullRequestContributions: 4,
+            totalPullRequestReviewContributions: 7,
+            totalRepositoryContributions: 3,
             contributionCalendar: {
               colors: ['#9be9a8', '#40c463', '#30a14e', '#216e39'],
               weeks: [

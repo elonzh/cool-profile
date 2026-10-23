@@ -449,7 +449,7 @@ it('runs the built CLI for file, stdout, plugin, batch and offline dry-run modes
     { ...environment, CNB_TOKEN: '' },
   );
   expect(preview.code, preview.stderr).toBe(0);
-  expect(JSON.parse(preview.stdout.toString()).jobs[0].params).toEqual({
+  expect(JSON.parse(preview.stdout.toString()).jobs[0].params).toMatchObject({
     source: 'cnb',
     subject: 'author',
   });

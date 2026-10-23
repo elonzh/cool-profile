@@ -17,6 +17,22 @@
         "source": "github",
         "subject": "elonzh"
       }
+    },
+    {
+      "pattern": "compact-cnb-*",
+      "params": {
+        "source": "cnb",
+        "subject": "elonzh",
+        "layout": "compact"
+      }
+    },
+    {
+      "pattern": "compact-github-*",
+      "params": {
+        "source": "github",
+        "subject": "elonzh",
+        "layout": "compact"
+      }
     }
   ]
 }
