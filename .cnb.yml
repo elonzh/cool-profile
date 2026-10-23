@@ -42,7 +42,7 @@ main:
   push:
     - <<: *check
       lock:
-        key: publish-cool-profile
+        key: publish-cool-profile-edge
         wait: true
         cancel-in-wait: true
       stages:
@@ -61,12 +61,12 @@ main:
               options:
                 event: api_trigger_image_arm64
                 sync: true
-        - name: publish-latest
+        - name: publish-edge
           script: |
             docker buildx imagetools create -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-amd64 ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}-linux-arm64
-            docker buildx imagetools create -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+            docker buildx imagetools create -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:edge ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
         - name: generate-with-published-plugin
-          image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest
+          image: ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:edge
           args: [render]
           settings:
             card: repository/overview

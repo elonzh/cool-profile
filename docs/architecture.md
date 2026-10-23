@@ -442,7 +442,7 @@ root action.yml 引用同一镜像，entrypoint 指向随应用打包的 action.
 
 CNB 插件使用镜像默认 ENTRYPOINT coolp，args 追加子命令 render 或 batch；server 通过 serve 启动。根 plugin-meta.json、README.md、README.en.md 组成插件市场贡献材料。CI 生成工作区文件，Git 提交、制品上传和部署由后续流水线步骤负责。
 
-双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 通过同步的 cnb:apply 任务并行调用 amd64、arm64 原生节点，分别构建、验证和推送架构标签；全部成功后合并为提交 SHA 的 manifest，再发布为 latest。父流水线串行执行，避免旧构建覆盖新镜像。最后通过真实 CNB 插件任务读取当前仓库，生成 PNG。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。
+双端 PR 与 main 构建检查代码、构建最终镜像，并运行 scripts/verify-image.mjs：在容器内启动本地 API，逐字节比较 CLI、插件、Action 与 HTTP 的 PNG，验证条件请求、字体及 GIF/WebP 动画编码。CNB main 通过同步的 cnb:apply 任务并行调用 amd64、arm64 原生节点，分别构建、验证和推送架构标签；全部成功后合并为提交 SHA 的 manifest，再发布为 edge。父流水线串行执行，避免旧构建覆盖新镜像。最后通过真实 CNB 插件任务读取当前仓库，生成 PNG。GitHub 的 Action smoke test 支持手动触发，实际拉取发布镜像并生成公开仓库 PNG。仓库流水线镜像使用 latest 等浮动标签。main 的应用镜像使用 edge，正式版 latest 只由版本发布更新。
 
 ## 画廊
 
@@ -459,7 +459,11 @@ apps/gallery 是 Vite + TypeScript 应用，从构建时生成的卡片目录读
 
 pattern 匹配 examples 下的媒体文件，文件名以 `-<theme>.<locale>.<format>` 结束。构建从包目录取得所属卡片，校验请求参数和媒体组合，并生成静态首帧预览；没有 manifest 的卡片仍按 ID 和 schema 展示。样张与请求元信息随包维护，新增包会自动进入画廊。
 
-画廊产物写入 apps/coolp/assets/gallery，随应用镜像分发，由 server 根路径交付。用户选择样张、编辑参数、切换主题和媒体语言后，可生成图片、下载或复制等义的 CLI、URL、coolp.json。空参数交由服务配置和卡片默认值补齐。界面语言独立于媒体语言，默认均为中文。
+默认画廊产物写入 apps/coolp/assets/gallery，随应用镜像和 npm 包分发，由 server 根路径交付。用户选择样张、编辑参数、切换主题和媒体语言后，可生成图片、下载或复制等义的 CLI、URL、coolp.json。空参数交由服务配置和卡片默认值补齐。界面语言独立于媒体语言，默认均为中文。
+
+pnpm gallery:build 使用 pages 模式，将同一画廊构建到 apps/gallery/dist；资源使用相对路径，适配 GitHub Pages 的 /cool-profile/ 子路径。该模式展示已生成样张，允许编辑参数并复制 CLI 或配置，隐藏依赖 server 的“生成图片”和 URL 页签。普通 server 构建保留实时生成、下载和图片 URL。Pages 不接收令牌、不访问数据源。
+
+.github/workflows/pages.yml 在 main 更新或手动触发时构建静态画廊，通过 Pages artifact 部署到 https://elonzh.github.io/cool-profile/，使用 github-pages 环境。仓库 Pages 的 Source 设置为 GitHub Actions，部署任务仅授予 pages:write、id-token:write；代码构建与部署分开。
 
 ### Direction contract
 
@@ -514,6 +518,47 @@ pnpm build 依次执行卡片发现、画廊构建和 CLI bundle，画廊写入 
 
 origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](https://github.com/elonzh/cool-profile)。两个远程共用 main、提交历史和版本号；pnpm sync:remotes 顺序推送，完成后核对两个远程 SHA。提交使用中文 Conventional Commit 标题，正文说明实现与验证。
 
+## 版本与分发
+
+根 package.json 的 version 是版本来源，apps/coolp/package.json 保持同值，使 coolp --version 与响应元数据一致。内部 workspace 包保持私有，只发布一个 npm 包 cool-profile；包内同时提供 CLI、server 和画廊。版本使用不含构建元数据的 SemVer，对应 Git 标签 v<version>。
+
+```sh
+pnpm release:prepare 0.1.0
+pnpm check
+pnpm release:pack
+pnpm release:verify
+# 提交版本与实现，正文记录验证；同步 main 到两个远程后：
+pnpm release:tag
+```
+
+prepare 只修改两个版本清单。pack 从已构建应用整理发布目录，解析 catalog 中 sharp、resvg 的原生依赖版本，复制 bundle、画廊、字体、Action 入口与许可证，生成可独立安装的 npm tarball、release.json 和 SHA256SUMS。不发布 workspace 源码或内部包。verify 在临时目录安装真实 tarball，检查 coolp --version、字体及许可，并通过本地数据源验证 CLI PNG 与 server PNG 一致，结束后删除临时目录。tag 要求干净的 main 与两个远程 main 的 SHA 一致，创建同一个注解标签并顺序推送到 CNB、GitHub。
+
+.github/workflows/release.yml 响应 v* 标签，也可手动指定已有标签重试；校验标签、清单版本和 main 的祖先关系。发布产物先经过完整检查及独立安装验证，再上传工作流制品。镜像在 GitHub 原生 amd64、arm64 runner 分别构建，验证容器内 CLI、CNB 插件、Action 与 HTTP 的输出，成功后推送对应架构标签，最后组合多架构 manifest。Dockerfile 使用与 npm 包相同的暂存目录及原生依赖；CLI、server、插件不拆分镜像。
+
+| 渠道           | 正式版示例                                                     | 预发布版                    |
+| -------------- | -------------------------------------------------------------- | --------------------------- |
+| npm            | cool-profile@0.1.0，latest                                     | 0.2.0-beta.1，next          |
+| Docker Hub     | elonzh/cool-profile:0.1.0，以及 0.1、0、latest                 | 0.2.0-beta.1、next          |
+| CNB 镜像       | docker.cnb.cool/elonzh/cool-profile:0.1.0，以及 0.1、0、latest | 0.2.0-beta.1、next          |
+| GitHub Release | v0.1.0：tarball、release.json、SHA256SUMS                      | 同名标签，标记为 prerelease |
+
+CNB main 流水线独立发布提交 SHA 和 edge，开发构建不覆盖正式版 latest。所有流水线基础镜像使用浮动标签。GitHub Action、CNB 插件与用户的 server 使用同一应用镜像。
+
+发布凭证配置在 GitHub 仓库设置中，不写入仓库、构建产物或画廊：
+
+| 类型           | 名称                   | 用途                                                            |
+| -------------- | ---------------------- | --------------------------------------------------------------- |
+| Secret         | DOCKERHUB_TOKEN        | 推送 elonzh/cool-profile 的 Docker Hub 令牌                     |
+| Variable       | DOCKERHUB_USERNAME     | Docker Hub 用户名，当前为 elonzh                                |
+| Secret         | CNB_REGISTRY_TOKEN     | 具有该仓库制品推送权限的 CNB 令牌                               |
+| Variable，可选 | CNB_REGISTRY_USERNAME  | CNB registry 登录用户名，默认 cnb                               |
+| Secret         | NPM_TOKEN              | 有 cool-profile 发布权限的 npm granular token；首次创建包时使用 |
+| Variable，可选 | NPM_TRUSTED_PUBLISHING | npm 已配置可信发布者后设为 true，可替代 NPM_TOKEN               |
+
+npm 可信发布者指定 GitHub 仓库 elonzh/cool-profile 与工作流 release.yml，允许直接 npm publish；新的可信发布配置默认可能只允许暂存发布，须在 npm 包设置中启用直接发布。工作流使用 GitHub hosted runner、Node.js 24 和 npm 11.5.1+，授予 id-token:write 并附带 provenance。初次发布创建包后可切换到可信发布。npm 已存在相同版本时核对 tarball integrity，一致才继续后续渠道，否则停止，避免将不同内容视为同一版本。重试旧版本时，仅当 npm 当前频道仍指向该版本才更新镜像浮动别名，以免回退正在使用的版本。GitHub Release 只上传已校验的同一组产物。
+
+缺少发布配置时，版本工作流在构建和验证产物后停止，尚未开始 npm 与镜像推送；Pages 独立部署。npm 与多个 registry 不提供跨服务事务，部分发布失败通过同一标签重试完成，不删除或重写已发布的 npm 版本。
+
 ## 技术依据
 
 - [Zod 严格对象、类型推导和校验](https://zod.dev/api)、[JSON Schema 导出](https://zod.dev/json-schema)
@@ -523,6 +568,7 @@ origin 为 [CNB](https://cnb.cool/elonzh/cool-profile)，github 为 [GitHub](htt
 - [pnpm workspace](https://pnpm.io/workspaces)、[catalog](https://pnpm.io/catalogs)
 - [Oxlint](https://oxc.rs/docs/guide/usage/linter/config)、[Oxfmt](https://oxc.rs/docs/guide/usage/formatter/config)、[prek](https://prek.j178.dev/local-hooks/)
 - [tsdown](https://tsdown.dev/)、[Vitest](https://vitest.dev/)、[Vite](https://vite.dev/)
+- [GitHub Pages 自定义工作流](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)、[npm 可信发布](https://docs.npmjs.com/trusted-publishers/)、[Docker 多平台构建](https://docs.docker.com/build/building/multi-platform/)
 - [resvg-js](https://github.com/thx/resvg-js)、[sharp](https://sharp.pixelplumbing.com/)
 - [CNB 插件 settings](https://docs.cnb.cool/zh/build/create-plugin.html)、[Job args](https://docs.cnb.cool/zh/build/grammar.html#job-args)
 - [GitHub Docker Action args](https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax#runsargs)、[Docker ENTRYPOINT 与 CMD](https://docs.docker.com/reference/dockerfile/#understand-how-cmd-and-entrypoint-interact)

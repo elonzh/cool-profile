@@ -1,6 +1,6 @@
 # Cool Profile
 
-[简体中文](README.md)
+[简体中文](README.md) · [Gallery](https://elonzh.github.io/cool-profile/?ui=en)
 
 Turn changing information into images and animations for your profile, README, or website.
 
@@ -39,40 +39,46 @@ Language cards offer bars, compact bars, horizontal and vertical donuts, and pie
 
 ## CLI
 
-Generate a file with the image:
+Install with Node.js 24+:
+
+```sh
+npm install -g cool-profile
+coolp --version
+```
+
+Or run without a global install: `npx cool-profile render activity/snake --source cnb --subject elonzh --locale en --output snake.svg`.
+
+Docker Hub and CNB provide the same image, including both the CLI and server:
 
 ```sh
 docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN \
-  docker.cnb.cool/elonzh/cool-profile:latest render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
+  elonzh/cool-profile:latest render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
 ```
 
-To run from source, use Node.js 24+ and pnpm. Run these commands once from the repository:
+You can replace the image with `docker.cnb.cool/elonzh/cool-profile:latest`. Use a version tag such as `:0.1.0` to select a release; `:next` tracks prereleases and `:edge` on CNB tracks main builds.
 
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-```
+[GitHub Releases](https://github.com/elonzh/cool-profile/releases) also provides the npm tarball and SHA-256 checksums. Install a downloaded tarball with `npm install -g ./cool-profile-0.1.0.tgz`.
 
 GitHub stats and calendars use `GITHUB_TOKEN`; CNB uses `CNB_TOKEN`. CNB tokens need `account-profile:r` and
 `account-engage:r`; repository cards also need `repo-basic-info:r`.
 
 ```sh
-pnpm coolp render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
-pnpm coolp render activity/snake --source github --subject elonzh --format gif --theme rainbow --locale en --output snake.gif
-pnpm coolp render activity/city --source cnb --subject elonzh --format png --theme blocks --locale en --output city.png
-pnpm coolp render activity/shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
-pnpm coolp render profile/stats --source cnb --subject elonzh --locale en --output stats.svg
-pnpm coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
-pnpm coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --locale en --output languages.svg
-pnpm coolp render profile/radar --source cnb --subject elonzh --theme dark --locale en --output radar.svg
-pnpm coolp render repository/overview --source github --subject Platane/snk --theme dark --locale en --output repo.svg
+coolp render activity/snake --source cnb --subject elonzh --locale en --output snake.svg
+coolp render activity/snake --source github --subject elonzh --format gif --theme rainbow --locale en --output snake.gif
+coolp render activity/city --source cnb --subject elonzh --format png --theme blocks --locale en --output city.png
+coolp render activity/shooter --source github --subject elonzh --theme arcade --locale en --output shooter.gif
+coolp render profile/stats --source cnb --subject elonzh --locale en --output stats.svg
+coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --locale en --output languages.svg
+coolp render profile/radar --source cnb --subject elonzh --theme dark --locale en --output radar.svg
+coolp render repository/overview --source github --subject Platane/snk --theme dark --locale en --output repo.svg
 ```
 
 Replace subject with your account, or a full repository path for repo cards. Languages default to code bytes on
 GitHub and repository counts on CNB. Use `--metric repositories` on either platform to count repos by primary
 language.
 
-For batch output, use `pnpm coolp batch --config coolp.yaml`; see the [configuration
+For batch output, use `coolp batch --config coolp.yaml`; see the [configuration
 example](docs/architecture.md#配置结构与下发).
 
 ## CNB plugin

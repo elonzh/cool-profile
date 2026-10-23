@@ -1,0 +1,189 @@
+name: Publish version
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish or resume (v0.1.0)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: version-release
+  cancel-in-progress: false
+
+env:
+  DOCKERHUB_IMAGE: docker.io/elonzh/cool-profile
+  CNB_IMAGE: docker.cnb.cool/elonzh/cool-profile
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      sha: ${{ steps.source.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+      - name: Verify release source
+        id: source
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          test "$(git describe --tags --exact-match HEAD)" = "$RELEASE_TAG"
+          git merge-base --is-ancestor HEAD origin/main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install pnpm
+        run: npm install --global "$(node -p 'require("./package.json").packageManager')"
+      - run: pnpm install --frozen-lockfile
+      - name: Validate version
+        id: version
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: pnpm release:check "$RELEASE_TAG"
+      - run: pnpm check
+      - run: pnpm release:pack
+      - run: pnpm release:verify
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release
+          path: dist/release/*
+          if-no-files-found: error
+      - name: Check publishing configuration
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          CNB_REGISTRY_TOKEN: ${{ secrets.CNB_REGISTRY_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TRUSTED_PUBLISHING: ${{ vars.NPM_TRUSTED_PUBLISHING }}
+        run: |
+          test -n "$DOCKERHUB_USERNAME" || { echo 'Set the DOCKERHUB_USERNAME repository variable'; exit 1; }
+          test -n "$DOCKERHUB_TOKEN" || { echo 'Set the DOCKERHUB_TOKEN repository secret'; exit 1; }
+          test -n "$CNB_REGISTRY_TOKEN" || { echo 'Set the CNB_REGISTRY_TOKEN repository secret'; exit 1; }
+          test -n "$NPM_TOKEN" || test "$NPM_TRUSTED_PUBLISHING" = true || { echo 'Configure npm trusted publishing or set NPM_TOKEN'; exit 1; }
+  images:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+      - uses: docker/setup-buildx-action@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to CNB registry
+        uses: docker/login-action@v4
+        with:
+          registry: docker.cnb.cool
+          username: ${{ vars.CNB_REGISTRY_USERNAME || 'cnb' }}
+          password: ${{ secrets.CNB_REGISTRY_TOKEN }}
+      - name: Build native image
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          REVISION: ${{ needs.build.outputs.sha }}
+          ARCH: ${{ matrix.arch }}
+        run: >-
+          docker build --platform "linux/$ARCH"
+          --label "org.opencontainers.image.revision=$REVISION"
+          --label "org.opencontainers.image.version=$VERSION"
+          -t cool-profile:verify .
+      - name: Verify packaged runtime
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: node scripts/verify-image.mjs cool-profile:verify "linux/$ARCH"
+      - name: Push verified native images
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          for image in "$DOCKERHUB_IMAGE" "$CNB_IMAGE"; do
+            docker tag cool-profile:verify "$image:$VERSION-linux-$ARCH"
+            docker push "$image:$VERSION-linux-$ARCH"
+          done
+  publish:
+    needs: [build, images]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: release
+          path: dist/release
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: docker/login-action@v4
+        with:
+          registry: docker.cnb.cool
+          username: ${{ vars.CNB_REGISTRY_USERNAME || 'cnb' }}
+          password: ${{ secrets.CNB_REGISTRY_TOKEN }}
+      - name: Verify release assets
+        run: cd dist/release && sha256sum --check SHA256SUMS
+      - name: Publish npm tarball
+        id: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: node scripts/publish-npm.mjs
+      - name: Publish multi-architecture images
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          PROMOTE_IMAGES: ${{ steps.npm.outputs.promote-images }}
+        run: |
+          for image in "$DOCKERHUB_IMAGE" "$CNB_IMAGE"; do
+            docker buildx imagetools create -t "$image:$VERSION" "$image:$VERSION-linux-amd64" "$image:$VERSION-linux-arm64"
+            if [ "$PROMOTE_IMAGES" != true ]; then continue; fi
+            aliases=$(node -p 'JSON.parse(require("fs").readFileSync("dist/release/release.json")).imageTags.slice(1).join(" ")')
+            for alias in $aliases; do
+              docker buildx imagetools create -t "$image:$alias" "$image:$VERSION"
+            done
+          done
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            if [ "$PRERELEASE" = true ]; then
+              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --prerelease --title "$RELEASE_TAG"
+            else
+              gh release create "$RELEASE_TAG" --verify-tag --generate-notes --title "$RELEASE_TAG"
+            fi
+          fi
+          gh release upload "$RELEASE_TAG" dist/release/* --clobber

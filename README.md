@@ -1,6 +1,6 @@
 # Cool Profile
 
-[English](README.en.md)
+[English](README.en.md) · [在线画廊](https://elonzh.github.io/cool-profile/)
 
 把动态信息变成图片与动画，嵌入个人主页、README 和网站。
 
@@ -38,38 +38,44 @@
 
 ## 命令行
 
-使用镜像生成文件：
+需要 Node.js 24+：
+
+```sh
+npm install -g cool-profile
+coolp --version
+```
+
+也可以免全局安装运行：`npx cool-profile render activity/snake --source cnb --subject elonzh --output snake.svg`。
+
+Docker Hub 与 CNB 提供同一镜像，包含命令行和 server：
 
 ```sh
 docker run --rm -v "$PWD:/workspace" -e CNB_TOKEN \
-  docker.cnb.cool/elonzh/cool-profile:latest render activity/snake --source cnb --subject elonzh --output snake.svg
+  elonzh/cool-profile:latest render activity/snake --source cnb --subject elonzh --output snake.svg
 ```
 
-从源码运行需要 Node.js 24+ 和 pnpm。在仓库目录首次执行：
+镜像可换成 `docker.cnb.cool/elonzh/cool-profile:latest`。使用 `:0.1.0` 等版本标签选择指定版本；`:next` 为预发布版，CNB 的 `:edge` 为 main 分支构建。
 
-```sh
-pnpm install --frozen-lockfile
-pnpm build
-```
+[GitHub Releases](https://github.com/elonzh/cool-profile/releases) 同时提供 npm 安装包和 SHA-256 校验文件，下载后执行 `npm install -g ./cool-profile-0.1.0.tgz` 即可安装。
 
 GitHub 统计与日历使用 `GITHUB_TOKEN`，CNB 使用 `CNB_TOKEN`。
 CNB 令牌需要 `account-profile:r`、`account-engage:r`；仓库卡还需要 `repo-basic-info:r`。
 
 ```sh
-pnpm coolp render activity/snake --source cnb --subject elonzh --output snake.svg
-pnpm coolp render activity/snake --source github --subject elonzh --format gif --theme rainbow --output snake.gif
-pnpm coolp render activity/city --source cnb --subject elonzh --format png --theme blocks --output city.png
-pnpm coolp render activity/shooter --source github --subject elonzh --theme arcade --output shooter.gif
-pnpm coolp render profile/stats --source cnb --subject elonzh --output stats.svg
-pnpm coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
-pnpm coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --output languages.svg
-pnpm coolp render profile/radar --source cnb --subject elonzh --theme dark --output radar.svg
-pnpm coolp render repository/overview --source github --subject Platane/snk --theme dark --output repo.svg
+coolp render activity/snake --source cnb --subject elonzh --output snake.svg
+coolp render activity/snake --source github --subject elonzh --format gif --theme rainbow --output snake.gif
+coolp render activity/city --source cnb --subject elonzh --format png --theme blocks --output city.png
+coolp render activity/shooter --source github --subject elonzh --theme arcade --output shooter.gif
+coolp render profile/stats --source cnb --subject elonzh --output stats.svg
+coolp render profile/stats --source github --subject elonzh --format png --theme dark --locale en --output stats.png
+coolp render profile/languages --source cnb --subject elonzh --layout compact --theme tokyonight --output languages.svg
+coolp render profile/radar --source cnb --subject elonzh --theme dark --output radar.svg
+coolp render repository/overview --source github --subject Platane/snk --theme dark --output repo.svg
 ```
 
 将 subject 换成你的账号，仓库卡则填写完整仓库路径。语言卡默认统计 GitHub 代码字节、CNB 仓库数，使用 `--metric repositories` 可在两个平台上按主要语言统计仓库数。
 
-批量生成使用 `pnpm coolp batch --config coolp.yaml`，配置方式见[配置示例](docs/architecture.md#配置结构与下发)。
+批量生成使用 `coolp batch --config coolp.yaml`，配置方式见[配置示例](docs/architecture.md#配置结构与下发)。
 
 ## CNB 插件
 

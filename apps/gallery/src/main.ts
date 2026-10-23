@@ -19,6 +19,9 @@ const badge = element<HTMLSpanElement>('preview-badge');
 const download = element<HTMLAnchorElement>('download');
 const play = element<HTMLButtonElement>('play');
 const generate = element<HTMLButtonElement>('generate');
+const staticGallery = import.meta.env.MODE === 'pages';
+generate.hidden = staticGallery;
+element<HTMLElement>('tab-url').hidden = staticGallery;
 const copy = element<HTMLButtonElement>('copy');
 const status = element<HTMLParagraphElement>('request-status');
 const examplePicker = element<HTMLSelectElement>('example');
@@ -342,7 +345,9 @@ element<HTMLElement>('ui-language').addEventListener('click', () => {
   renderCopy();
 });
 
-const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-output]')];
+const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-output]')].filter(
+  (tab) => !tab.hidden,
+);
 for (const tab of tabs)
   tab.addEventListener('click', () => {
     outputKind = tab.dataset.output as typeof outputKind;
@@ -384,6 +389,7 @@ copy.addEventListener('click', async () => {
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
+  if (staticGallery) return;
   updateOutputs();
   if (!outputs || !form.reportValidity()) {
     notice(text('invalid'), true);

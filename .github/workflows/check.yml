@@ -20,6 +20,8 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Check workspace
         run: pnpm check
+      - name: Verify npm distribution
+        run: pnpm release:pack && pnpm release:verify
   image:
     needs: check
     runs-on: ubuntu-latest

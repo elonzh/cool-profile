@@ -1,6 +1,6 @@
 {
   "name": "cool-profile",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -17,7 +17,14 @@
     "hooks:install": "prek install",
     "sync:remotes": "git push origin main && git push github main",
     "gallery:dev": "pnpm cards:discover && pnpm --filter @cool-profile/gallery dev",
-    "examples:generate": "tsx scripts/generate-examples.ts"
+    "examples:generate": "tsx scripts/generate-examples.ts",
+    "gallery:build": "pnpm cards:discover && pnpm --filter @cool-profile/gallery build --mode pages",
+    "release:prepare": "tsx scripts/release.ts prepare",
+    "release:stage": "tsx scripts/release.ts stage",
+    "release:pack": "tsx scripts/release.ts pack",
+    "release:check": "tsx scripts/release.ts check",
+    "release:tag": "tsx scripts/release.ts tag",
+    "release:verify": "tsx scripts/verify-package.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:",
@@ -28,6 +35,7 @@
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:",
+    "yaml": "catalog:",
     "zod": "catalog:"
   },
   "engines": {
