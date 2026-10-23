@@ -10,6 +10,8 @@ export interface GallerySample {
   theme: string;
   locale: string;
   animated: boolean;
+  width: number;
+  height: number;
 }
 export interface GalleryCase {
   params: Record<string, unknown>;
@@ -23,6 +25,22 @@ export interface CatalogCard {
   themes: string[];
   locales: string[];
   cases: GalleryCase[];
+}
+
+export interface GalleryEntry {
+  card: CatalogCard;
+  caseIndex: number;
+  sample: GallerySample;
+}
+
+export function galleryEntries(cards: readonly CatalogCard[]): GalleryEntry[] {
+  return cards.flatMap((card) =>
+    card.cases.flatMap((example, caseIndex) =>
+      [...example.samples]
+        .sort((a, b) => card.themes.indexOf(a.theme) - card.themes.indexOf(b.theme))
+        .map((sample) => ({ card, caseIndex, sample })),
+    ),
+  );
 }
 
 export function wireValue(value: unknown): string {

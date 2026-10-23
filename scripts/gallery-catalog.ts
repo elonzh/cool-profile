@@ -96,6 +96,8 @@ export async function writeGalleryCatalog(
           locale,
           theme,
           animated,
+          width: metadata.width!,
+          height: metadata.pageHeight ?? metadata.height!,
         });
       }
       if (!samples.length)

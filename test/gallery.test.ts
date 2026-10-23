@@ -14,7 +14,12 @@ import {
   resolveBatch,
   resolveCardRequest,
 } from '../apps/coolp/src/config/index.js';
-import { isAnimatedSvg, requestArtifacts, sampleFor } from '../apps/gallery/src/model.js';
+import {
+  galleryEntries,
+  isAnimatedSvg,
+  requestArtifacts,
+  sampleFor,
+} from '../apps/gallery/src/model.js';
 import type { CatalogCard } from '../apps/gallery/src/model.js';
 import { writeGalleryCatalog } from '../scripts/gallery-catalog.js';
 
@@ -128,6 +133,8 @@ it('keeps the requested sample language and theme and identifies animation in SV
         theme: 'dark',
         locale: 'zh-CN',
         animated: true,
+        width: 800,
+        height: 200,
       },
     ],
   };
@@ -164,6 +171,7 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   const target = resolve(root, 'generated/catalog.ts');
   const catalog = await writeGalleryCatalog(packages, target);
   expect(catalog[0]?.id).toBe('profile/overview');
+  expect(catalog[0]?.cases[0]?.samples[0]).toMatchObject({ width: 20, height: 20 });
   expect(catalog[0]?.cases[0]?.params).toEqual({ 'github-user': 'one', 'cnb-user': 'two' });
   expect(catalog[0]?.cases[0]?.samples.map((sample) => sample.locale).sort()).toEqual([
     'en',
@@ -180,4 +188,49 @@ it('discovers namespaced fusion-card samples without requiring source or subject
     JSON.stringify({ ...manifest, id: 'arbitrary' }),
   );
   await expect(writeGalleryCatalog(packages, target)).rejects.toThrow('Unrecognized');
+});
+
+it('exposes every theme, locale, format and case with its original configuration', () => {
+  const sample = {
+    url: 'dark.svg',
+    poster: 'poster.png',
+    width: 800,
+    height: 200,
+    format: 'svg' as const,
+    theme: 'dark',
+    locale: 'zh-CN',
+    animated: false,
+  };
+  const first = {
+    ...descriptor,
+    themes: ['default', 'dark'],
+    cases: [
+      {
+        params: { source: 'cnb', subject: 'one' },
+        samples: [
+          sample,
+          { ...sample, url: 'default.svg', theme: 'default' },
+          { ...sample, url: 'dark.en.svg', locale: 'en' },
+        ],
+      },
+      {
+        params: { source: 'github', subject: 'two', layout: 'compact' },
+        samples: [{ ...sample, format: 'png' as const, url: 'compact.png' }],
+      },
+    ],
+  };
+  const entries = galleryEntries([first]);
+  expect(entries).toHaveLength(4);
+  expect(entries.map((entry) => entry.sample.url)).toEqual([
+    'default.svg',
+    'dark.svg',
+    'dark.en.svg',
+    'compact.png',
+  ]);
+  expect(entries[3]!.card.cases[entries[3]!.caseIndex]!.params).toEqual({
+    source: 'github',
+    subject: 'two',
+    layout: 'compact',
+  });
+  expect(first.cases[0]!.samples[0]!.url).toBe('dark.svg');
 });

@@ -1,6 +1,26 @@
 export const messages = {
   'zh-CN': {
     docs: '文档',
+    gallery: '作品画廊',
+    allExamples: '全部示例',
+    navigation: '卡片导航',
+    platform: '平台',
+    allPlatforms: '全部平台',
+    allLanguages: '全部语言',
+    search: '搜索示例',
+    searchPlaceholder: '卡片、主题、账号…',
+    noResults: '没有匹配的示例',
+    clearFilters: '清除筛选',
+    close: '关闭',
+    preview: '预览',
+    skip: '跳到示例',
+    calendar: '日历',
+    compact: '紧凑',
+    normal: '条形',
+    donut: '横向圆环',
+    'donut-vertical': '纵向圆环',
+    pie: '饼图',
+    dashboard: '组合图',
     sampleAccount: '样张账号',
     customize: '自定义',
     format: '格式',
@@ -41,6 +61,26 @@ export const messages = {
   },
   en: {
     docs: 'Docs',
+    gallery: 'Gallery',
+    allExamples: 'All examples',
+    navigation: 'Card navigation',
+    platform: 'Platform',
+    allPlatforms: 'All platforms',
+    allLanguages: 'All languages',
+    search: 'Search examples',
+    searchPlaceholder: 'Card, theme, account…',
+    noResults: 'No matching examples',
+    clearFilters: 'Clear filters',
+    close: 'Close',
+    preview: 'Preview',
+    skip: 'Skip to examples',
+    calendar: 'Calendar',
+    compact: 'Compact',
+    normal: 'Bars',
+    donut: 'Horizontal donut',
+    'donut-vertical': 'Vertical donut',
+    pie: 'Pie',
+    dashboard: 'Dashboard',
     sampleAccount: 'Sample account',
     customize: 'Customize',
     format: 'Format',
@@ -82,3 +122,7 @@ export const messages = {
 };
 export type UiLocale = keyof typeof messages;
 export type MessageKey = keyof (typeof messages)['zh-CN'];
+
+export function labelFor(value: string, locale: UiLocale): string {
+  return Object.hasOwn(messages[locale], value) ? messages[locale][value as MessageKey] : value;
+}

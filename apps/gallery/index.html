@@ -3,125 +3,191 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="将动态信息变成个人主页图片与动画。" />
-    <title>Cool Profile</title>
+    <meta name="theme-color" content="#193c34" />
+    <meta name="description" content="探索 Cool Profile 的主页卡片、主题与动画。" />
+    <title>Cool Profile — Gallery</title>
   </head>
   <body>
-    <header class="site-header">
-      <h1>Cool Profile<span class="brand-dot" aria-hidden="true"></span></h1>
-      <nav aria-label="项目">
-        <a href="https://github.com/elonzh/cool-profile">GitHub</a>
-        <a href="https://cnb.cool/elonzh/cool-profile">CNB</a>
-        <a
-          href="https://cnb.cool/elonzh/cool-profile/-/blob/main/docs/architecture.md"
-          data-copy="docs"
-          >文档</a
-        >
+    <a class="skip-link" href="#gallery-start" data-global-copy="skip">跳到示例</a>
+    <aside class="sidebar">
+      <a class="brand" href="#gallery-start" aria-label="Cool Profile">
+        <svg viewBox="0 0 28 28" aria-hidden="true">
+          <rect x="1" y="1" width="11" height="11" rx="3" />
+          <rect x="16" y="1" width="11" height="11" rx="3" />
+          <rect x="1" y="16" width="11" height="11" rx="3" />
+          <path d="M17 16h10v10H17z" />
+        </svg>
+        <span>Cool Profile</span>
+      </a>
+      <nav class="collection-nav" id="collection-nav" aria-label="卡片导航"></nav>
+      <div class="sidebar-character" aria-hidden="true">
+        <img src="/src/assets/er-liang.webp" alt="" width="180" height="270" />
+      </div>
+      <footer class="sidebar-footer">
+        <div class="project-links">
+          <a href="https://github.com/elonzh/cool-profile">GitHub</a>
+          <a href="https://cnb.cool/elonzh/cool-profile">CNB</a>
+          <a
+            href="https://cnb.cool/elonzh/cool-profile/-/blob/main/docs/architecture.md"
+            data-global-copy="docs"
+            >文档</a
+          >
+        </div>
         <button type="button" id="ui-language">English</button>
-      </nav>
-    </header>
-    <main class="workbench">
-      <section class="showcase" aria-labelledby="card-title">
-        <div class="preview-heading">
-          <h2 id="card-title"></h2>
-          <div class="preview-state">
-            <span id="preview-badge"></span>
-            <button type="button" id="play" hidden></button>
-          </div>
-        </div>
-        <div class="preview-canvas" id="canvas">
-          <img id="preview" alt="" />
-          <p id="empty-preview" hidden></p>
-        </div>
-        <div class="preview-actions">
-          <label class="sample-picker"
-            ><span data-copy="sampleAccount">样张账号</span
-            ><select id="example"></select
+      </footer>
+    </aside>
+    <main class="gallery-main" id="gallery-start">
+      <header class="gallery-heading">
+        <h1 data-global-copy="gallery">作品画廊</h1>
+        <span
+          class="collection-total"
+          id="collection-total"
+          role="status"
+          aria-live="polite"
+        ></span>
+      </header>
+      <form class="gallery-toolbar" id="gallery-filters" role="search">
+        <label class="search-field">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="8.5" cy="8.5" r="5.5" />
+            <path d="m13 13 4 4" />
+          </svg>
+          <span class="sr-only" data-global-copy="search">搜索示例</span>
+          <input id="search" type="search" autocomplete="off" placeholder="卡片、主题、账号…" />
+        </label>
+        <div class="gallery-selects">
+          <label
+            ><span data-global-copy="platform">平台</span
+            ><select id="source-filter"></select
           ></label>
-          <a id="download" download></a>
+          <label
+            ><span data-global-copy="mediaLanguage">媒体语言</span
+            ><select id="language-filter"></select
+          ></label>
         </div>
-        <nav class="card-strip" id="cards" aria-label="卡片效果"></nav>
-      </section>
-      <aside class="controls">
-        <h2 data-copy="customize">自定义</h2>
-        <form id="settings">
-          <div id="primary-fields" class="field-stack"></div>
-          <div class="media-fields">
-            <label
-              ><span data-copy="format">格式</span
-              ><select id="format"></select
-            ></label>
-            <label
-              ><span data-copy="theme">主题</span
-              ><select id="theme"></select
-            ></label>
-            <label class="locale-field"
-              ><span data-copy="mediaLanguage">媒体语言</span
-              ><select id="locale"></select
-            ></label>
-          </div>
-          <details id="advanced">
-            <summary data-copy="more">更多参数</summary>
-            <div id="advanced-fields" class="field-stack"></div>
-            <label
-              ><span data-copy="seed">随机种子</span
-              ><input id="seed" type="number" min="0" max="4294967295" step="1" value="0"
-            /></label>
-          </details>
-          <button class="generate" id="generate" type="submit" data-copy="generate">
-            生成图片
-          </button>
-          <p id="request-status" role="status" aria-live="polite" hidden></p>
-        </form>
-      </aside>
-      <section class="outputs" aria-label="使用方式">
-        <div class="output-toolbar">
-          <div role="tablist" aria-label="使用方式" id="tabs">
-            <button
-              type="button"
-              role="tab"
-              id="tab-cli"
-              aria-controls="output-panel"
-              aria-selected="true"
-              tabindex="0"
-              data-output="cli"
-              data-copy="cli"
-            >
-              命令行
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tab-url"
-              aria-controls="output-panel"
-              aria-selected="false"
-              tabindex="-1"
-              data-output="url"
-            >
-              URL
-            </button>
-            <button
-              type="button"
-              role="tab"
-              id="tab-config"
-              aria-controls="output-panel"
-              aria-selected="false"
-              tabindex="-1"
-              data-output="config"
-            >
-              coolp.json
-            </button>
-          </div>
-          <button type="button" id="copy" data-copy="copy">复制</button>
-        </div>
-        <pre
-          id="output-panel"
-          role="tabpanel"
-          aria-labelledby="tab-cli"
-          tabindex="0"
-        ><code id="output"></code></pre>
-      </section>
+      </form>
+      <div id="collections"></div>
+      <div class="gallery-empty" id="gallery-empty" hidden>
+        <h2 data-global-copy="noResults">没有匹配的示例</h2>
+        <button type="button" id="clear-filters" data-global-copy="clearFilters">清除筛选</button>
+      </div>
     </main>
+    <dialog class="configuration-modal" id="configuration" aria-labelledby="card-title">
+      <header class="dialog-header">
+        <div>
+          <h2 id="card-title"></h2>
+          <span id="card-path"></span>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          id="close-configuration"
+          aria-label="关闭"
+          autofocus
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+        </button>
+      </header>
+      <div class="dialog-content" id="dialog-content">
+        <div class="dialog-layout">
+          <section class="showcase" aria-label="预览" id="preview-section">
+            <div class="preview-heading">
+              <span id="preview-badge"></span><button type="button" id="play" hidden></button>
+            </div>
+            <div class="preview-canvas" id="canvas">
+              <img id="preview" alt="" hidden />
+              <p id="empty-preview" hidden></p>
+            </div>
+            <div class="preview-actions">
+              <label class="sample-picker"
+                ><span data-copy="sampleAccount">样张账号</span
+                ><select id="example"></select
+              ></label>
+              <a id="download" download></a>
+            </div>
+          </section>
+          <section class="controls" aria-labelledby="customize-title">
+            <h3 data-copy="customize" id="customize-title">自定义</h3>
+            <form id="settings">
+              <div id="primary-fields" class="field-stack"></div>
+              <div class="media-fields">
+                <label
+                  ><span data-copy="format">格式</span
+                  ><select id="format"></select
+                ></label>
+                <label
+                  ><span data-copy="theme">主题</span
+                  ><select id="theme"></select
+                ></label>
+                <label class="locale-field"
+                  ><span data-copy="mediaLanguage">媒体语言</span
+                  ><select id="locale"></select
+                ></label>
+              </div>
+              <details id="advanced">
+                <summary data-copy="more">更多参数</summary>
+                <div id="advanced-fields" class="field-stack"></div>
+                <label
+                  ><span data-copy="seed">随机种子</span
+                  ><input id="seed" type="number" min="0" max="4294967295" step="1" value="0"
+                /></label>
+              </details>
+              <button class="generate" id="generate" type="submit" data-copy="generate">
+                生成图片
+              </button>
+              <p id="request-status" role="status" aria-live="polite" hidden></p>
+            </form>
+          </section>
+          <section class="outputs" aria-label="使用方式">
+            <div class="output-toolbar">
+              <div role="tablist" aria-label="使用方式" id="tabs">
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-cli"
+                  aria-controls="output-panel"
+                  aria-selected="true"
+                  tabindex="0"
+                  data-output="cli"
+                  data-copy="cli"
+                >
+                  命令行
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-url"
+                  aria-controls="output-panel"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-output="url"
+                >
+                  URL
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="tab-config"
+                  aria-controls="output-panel"
+                  aria-selected="false"
+                  tabindex="-1"
+                  data-output="config"
+                >
+                  coolp.json
+                </button>
+              </div>
+              <button type="button" id="copy" data-copy="copy">复制</button>
+            </div>
+            <pre
+              id="output-panel"
+              role="tabpanel"
+              aria-labelledby="tab-cli"
+              tabindex="0"
+            ><code id="output"></code></pre>
+          </section>
+        </div>
+      </div>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

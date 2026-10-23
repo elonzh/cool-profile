@@ -1,17 +1,24 @@
 :root {
   color-scheme: light;
-  --page: #f8fafb;
+  --page: #f7f7f2;
   --surface: #fff;
-  --canvas: #edf1f3;
-  --ink: #18272e;
-  --muted: #53656e;
-  --line: #d5dfe3;
-  --scroll: #9baeb7;
-  --green: #087e58;
-  --green-hover: #076346;
-  --green-tint: #eaf5ef;
-  --selection: #b8e8d4;
-  --error: #a62a32;
-  --code: #244b43;
+  --canvas: #e9ede7;
+  --ink: #202e27;
+  --muted: #627066;
+  --line: #dce2d8;
+  --scroll: #99aa9d;
+  --green: #226349;
+  --green-hover: #164e38;
+  --green-tint: #e6eee2;
+  --selection: #cbe7a3;
+  --error: #a2352a;
+  --code: #2f5141;
+  --sidebar: #193c34;
+  --sidebar-ink: #f0f4e8;
+  --sidebar-muted: #b4c9bc;
+  --sidebar-selected: #cde6a5;
   --mono: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  --sans:
+    'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
 }
