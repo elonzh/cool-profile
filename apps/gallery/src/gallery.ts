@@ -8,7 +8,7 @@ export function createGallery(
   getLocale: () => UiLocale,
   open: (entry: GalleryEntry) => void,
 ) {
-  const entries = galleryEntries(cards);
+  const cases = cards.flatMap((card) => card.cases);
   const collections = document.getElementById('collections')!;
   const navigation = document.getElementById('collection-nav')!;
   const total = document.getElementById('collection-total')!;
@@ -153,7 +153,7 @@ export function createGallery(
   }
 
   function render() {
-    const visible = entries.filter((entry) => {
+    const visible = galleryEntries(cards, (entry) => {
       const { sample, card, caseIndex } = entry;
       const params = card.cases[caseIndex]!.params;
       if (source && params.source !== source) return false;
@@ -229,8 +229,8 @@ export function createGallery(
       sources,
       [
         ...new Set(
-          entries
-            .map((entry) => entry.card.cases[entry.caseIndex]!.params.source)
+          cases
+            .map((example) => example.params.source)
             .filter((value): value is string => typeof value === 'string'),
         ),
       ],
@@ -240,7 +240,7 @@ export function createGallery(
     );
     fill(
       languages,
-      [...new Set(entries.map((entry) => entry.sample.locale))],
+      [...new Set(cases.flatMap((example) => example.samples.map((sample) => sample.locale)))],
       locale,
       text('allLanguages'),
       (value) => (value === 'zh-CN' ? '中文' : value === 'en' ? 'English' : value),
@@ -284,8 +284,10 @@ export function createGallery(
   reducedMotion.addEventListener('change', () => {
     if (!reducedMotion.matches) return;
     for (const image of collections.querySelectorAll<HTMLImageElement>('img')) {
-      const entry = entries.find((entry) => entry.sample.url === image.getAttribute('src'));
-      if (entry) image.src = entry.sample.poster;
+      const sample = cases
+        .flatMap((example) => example.samples)
+        .find((sample) => sample.url === image.getAttribute('src'));
+      if (sample) image.src = sample.poster;
     }
   });
   return { localize };

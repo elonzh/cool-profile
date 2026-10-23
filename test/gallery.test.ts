@@ -20,7 +20,7 @@ import {
   requestArtifacts,
   sampleFor,
 } from '../apps/gallery/src/model.js';
-import type { CatalogCard } from '../apps/gallery/src/model.js';
+import type { CatalogCard, GallerySample } from '../apps/gallery/src/model.js';
 import { writeGalleryCatalog } from '../scripts/gallery-catalog.js';
 
 const folders: string[] = [];
@@ -153,6 +153,7 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   await mkdir(examples);
   const manifest = {
     name: { 'zh-CN': '融合卡', en: 'Combined' },
+    showcase: ['combined-default.*.svg'],
     cases: [{ pattern: 'combined-*', params: { 'github-user': 'one', 'cnb-user': 'two' } }],
   };
   await writeFile(resolve(examples, 'manifest.json'), JSON.stringify(manifest));
@@ -171,7 +172,7 @@ it('discovers namespaced fusion-card samples without requiring source or subject
   const target = resolve(root, 'generated/catalog.ts');
   const catalog = await writeGalleryCatalog(packages, target);
   expect(catalog[0]?.id).toBe('profile/overview');
-  expect(catalog[0]?.cases[0]?.samples[0]).toMatchObject({ width: 20, height: 20 });
+  expect(catalog[0]?.cases[0]?.samples[0]).toMatchObject({ width: 20, height: 20, showcase: 0 });
   expect(catalog[0]?.cases[0]?.params).toEqual({ 'github-user': 'one', 'cnb-user': 'two' });
   expect(catalog[0]?.cases[0]?.samples.map((sample) => sample.locale).sort()).toEqual([
     'en',
@@ -188,10 +189,15 @@ it('discovers namespaced fusion-card samples without requiring source or subject
     JSON.stringify({ ...manifest, id: 'arbitrary' }),
   );
   await expect(writeGalleryCatalog(packages, target)).rejects.toThrow('Unrecognized');
+  await writeFile(
+    resolve(examples, 'manifest.json'),
+    JSON.stringify({ ...manifest, showcase: ['missing-*'] }),
+  );
+  await expect(writeGalleryCatalog(packages, target)).rejects.toThrow('showcase missing-*');
 });
 
-it('exposes every theme, locale, format and case with its original configuration', () => {
-  const sample = {
+it('selects one sample per curated style after filtering without changing its configuration', () => {
+  const sample: GallerySample = {
     url: 'dark.svg',
     poster: 'poster.png',
     width: 800,
@@ -200,7 +206,10 @@ it('exposes every theme, locale, format and case with its original configuration
     theme: 'dark',
     locale: 'zh-CN',
     animated: false,
+    showcase: 1,
   };
+  const unfeatured = { ...sample, url: 'unfeatured.svg' };
+  delete unfeatured.showcase;
   const first = {
     ...descriptor,
     themes: ['default', 'dark'],
@@ -209,28 +218,42 @@ it('exposes every theme, locale, format and case with its original configuration
         params: { source: 'cnb', subject: 'one' },
         samples: [
           sample,
-          { ...sample, url: 'default.svg', theme: 'default' },
+          { ...sample, url: 'default.svg', theme: 'default', showcase: 0 },
           { ...sample, url: 'dark.en.svg', locale: 'en' },
+          { ...sample, url: 'dark.png', format: 'png' as const },
+          unfeatured,
+        ],
+      },
+      {
+        params: { source: 'github', subject: 'two' },
+        samples: [
+          { ...sample, url: 'github.svg' },
+          { ...sample, url: 'github.en.svg', locale: 'en' },
         ],
       },
       {
         params: { source: 'github', subject: 'two', layout: 'compact' },
-        samples: [{ ...sample, format: 'png' as const, url: 'compact.png' }],
+        samples: [{ ...sample, format: 'png' as const, url: 'compact.png', showcase: 2 }],
       },
     ],
   };
   const entries = galleryEntries([first]);
-  expect(entries).toHaveLength(4);
   expect(entries.map((entry) => entry.sample.url)).toEqual([
     'default.svg',
     'dark.svg',
-    'dark.en.svg',
     'compact.png',
   ]);
-  expect(entries[3]!.card.cases[entries[3]!.caseIndex]!.params).toEqual({
+  expect(entries[2]!.card.cases[entries[2]!.caseIndex]!.params).toEqual({
     source: 'github',
     subject: 'two',
     layout: 'compact',
   });
+  const githubEnglish = galleryEntries(
+    [first],
+    (entry) =>
+      entry.card.cases[entry.caseIndex]!.params.source === 'github' && entry.sample.locale === 'en',
+  );
+  expect(githubEnglish.map((entry) => entry.sample.url)).toEqual(['github.en.svg']);
+  expect(githubEnglish[0]!.caseIndex).toBe(1);
   expect(first.cases[0]!.samples[0]!.url).toBe('dark.svg');
 });

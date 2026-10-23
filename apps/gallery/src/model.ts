@@ -12,6 +12,7 @@ export interface GallerySample {
   animated: boolean;
   width: number;
   height: number;
+  showcase?: number;
 }
 export interface GalleryCase {
   params: Record<string, unknown>;
@@ -33,14 +34,24 @@ export interface GalleryEntry {
   sample: GallerySample;
 }
 
-export function galleryEntries(cards: readonly CatalogCard[]): GalleryEntry[] {
-  return cards.flatMap((card) =>
-    card.cases.flatMap((example, caseIndex) =>
-      [...example.samples]
-        .sort((a, b) => card.themes.indexOf(a.theme) - card.themes.indexOf(b.theme))
-        .map((sample) => ({ card, caseIndex, sample })),
-    ),
-  );
+export function galleryEntries(
+  cards: readonly CatalogCard[],
+  matches: (entry: GalleryEntry) => boolean = () => true,
+): GalleryEntry[] {
+  return cards.flatMap((card) => {
+    const selected = new Map<number, GalleryEntry>();
+    for (const [caseIndex, example] of card.cases.entries()) {
+      const samples = [...example.samples].sort(
+        (a, b) => card.locales.indexOf(a.locale) - card.locales.indexOf(b.locale),
+      );
+      for (const sample of samples) {
+        if (sample.showcase === undefined || selected.has(sample.showcase)) continue;
+        const entry = { card, caseIndex, sample };
+        if (matches(entry)) selected.set(sample.showcase, entry);
+      }
+    }
+    return [...selected].sort(([a], [b]) => a - b).map(([, entry]) => entry);
+  });
 }
 
 export function wireValue(value: unknown): string {

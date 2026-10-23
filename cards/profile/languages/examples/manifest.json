@@ -3,6 +3,13 @@
     "zh-CN": "语言分布",
     "en": "Languages"
   },
+  "showcase": [
+    "*-default.*.svg",
+    "normal-*-dark.*.svg",
+    "compact-*-tokyonight.*.svg",
+    "donut-vertical-*-radical.*.svg",
+    "pie-*-dracula.*.svg"
+  ],
   "cases": [
     {
       "pattern": "cnb-*",

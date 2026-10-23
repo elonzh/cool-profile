@@ -3,6 +3,7 @@
     "zh-CN": "太空射击",
     "en": "Space shooter"
   },
+  "showcase": ["*-default.*.gif", "*-dark.*.gif", "*-arcade.*.gif"],
   "cases": [
     {
       "pattern": "cnb-*",

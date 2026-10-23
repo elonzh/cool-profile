@@ -9,12 +9,14 @@ import type { CardPackage } from './card-packages.js';
 import type { CatalogCard, GalleryCase } from '../apps/gallery/src/model.js';
 import { isAnimatedSvg } from '../apps/gallery/src/model.js';
 
+const samplePattern = z.string().regex(/^[A-Za-z0-9*?_.-]+$/);
 const manifestSchema = z.strictObject({
   name: z.record(z.string(), z.string().min(1)),
+  showcase: z.array(samplePattern).min(1),
   cases: z
     .array(
       z.strictObject({
-        pattern: z.string().regex(/^[A-Za-z0-9*?_.-]+$/),
+        pattern: samplePattern,
         params: z.record(z.string(), z.unknown()),
       }),
     )
@@ -54,6 +56,7 @@ export async function writeGalleryCatalog(
     }
     const files = entry ? await readdir(directory) : [];
     const cases: GalleryCase[] = [];
+    const showcased = new Set<number>();
     for (const example of entry?.cases ?? []) {
       const samples: GalleryCase['samples'] = [];
       for (const file of files.filter((name) => matchesGlob(name, example.pattern)).sort()) {
@@ -78,6 +81,8 @@ export async function writeGalleryCatalog(
           );
         const filePath = resolve(directory, file);
         const input = await readFile(filePath);
+        const showcase = entry!.showcase.findIndex((pattern) => matchesGlob(file, pattern));
+        if (showcase >= 0) showcased.add(showcase);
         const metadata = await sharp(input).metadata();
         const animated =
           format === 'svg' ? isAnimatedSvg(input.toString()) : (metadata.pages ?? 1) > 1;
@@ -98,12 +103,16 @@ export async function writeGalleryCatalog(
           animated,
           width: metadata.width!,
           height: metadata.pageHeight ?? metadata.height!,
+          ...(showcase >= 0 ? { showcase } : {}),
         });
       }
       if (!samples.length)
         throw new Error(manifestFile + ': no supported samples match ' + example.pattern);
       cases.push({ params: example.params, samples });
     }
+    for (const [index, pattern] of (entry?.showcase ?? []).entries())
+      if (!showcased.has(index))
+        throw new Error(manifestFile + ': no supported samples match showcase ' + pattern);
     catalog.push({
       id: card.id,
       name: entry?.name ?? {},

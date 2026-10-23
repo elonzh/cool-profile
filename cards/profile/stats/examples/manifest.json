@@ -3,6 +3,7 @@
     "zh-CN": "个人统计",
     "en": "Profile stats"
   },
+  "showcase": ["*-default.*.svg", "*-dark.*.svg", "compact-*-tokyonight.*.svg"],
   "cases": [
     {
       "pattern": "cnb-*",

@@ -3,6 +3,7 @@
     "zh-CN": "贪吃蛇",
     "en": "Snake"
   },
+  "showcase": ["*-default.*.svg", "*-rainbow.*.svg", "*-ocean.*.svg"],
   "cases": [
     {
       "pattern": "cnb-*",

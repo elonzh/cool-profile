@@ -3,6 +3,7 @@
     "zh-CN": "贡献雷达",
     "en": "Contribution radar"
   },
+  "showcase": ["*-default.*.svg", "*-radical.*.svg", "*-tokyonight.*.svg"],
   "cases": [
     {
       "pattern": "cnb-*",

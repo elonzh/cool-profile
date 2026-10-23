@@ -3,6 +3,12 @@
     "zh-CN": "3D 活跃日历",
     "en": "3D activity calendar"
   },
+  "showcase": [
+    "*-default.*.svg",
+    "*-blocks.*.svg",
+    "*-night-view.*.svg",
+    "calendar-*-season.*.svg"
+  ],
   "cases": [
     {
       "pattern": "cnb-*",

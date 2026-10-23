@@ -3,6 +3,7 @@
     "zh-CN": "仓库卡片",
     "en": "Repository"
   },
+  "showcase": ["*-default.*.svg", "*-dark.*.svg", "compact-*-radical.*.svg"],
   "cases": [
     {
       "pattern": "cnb-*",
